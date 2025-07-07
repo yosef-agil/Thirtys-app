@@ -9,6 +9,17 @@ import adminRoutes from './routes/admin.js';
 
 dotenv.config();
 
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Serve static files
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+// Catch all routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+});
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 

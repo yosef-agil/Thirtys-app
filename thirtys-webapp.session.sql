@@ -1,4 +1,6 @@
-USE railway;
+-- database/schema.sql
+CREATE DATABASE IF NOT EXISTS photo_studio_booking;
+USE photo_studio_booking;
 
 -- Drop existing tables if any (for fresh setup)
 DROP TABLE IF EXISTS bookings;
