@@ -4,18 +4,18 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const pool = mysql.createPool({
-  host: process.env.MYSQLHOST || 'mysql-production-9548.up.railway.app',
-  port: parseInt(process.env.MYSQLPORT || '3306'), // or 3366 based on what works
+  host: process.env.MYSQLHOST || 'mysql.railway.internal', // Gunakan internal jika aplikasi di Railway
+  port: parseInt(process.env.MYSQLPORT || '3306'), // PORT YANG BENAR ADALAH 3306
   user: process.env.MYSQLUSER || 'root',
-  password: process.env.MYSQLPASSWORD || 'RvLywKsDS1JfpWqnTQeG0AWhFXtCfYos', // verify exact password
+  password: process.env.MYSQLPASSWORD || 'RvLywKsDS1JfpWqnTQeG0AWhFXtCfYos',
   database: process.env.MYSQLDATABASE || 'railway',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  connectTimeout: 2000,
-  ssl: {
-    rejectUnauthorized: false // Railway's public MySQL might need this
-  }
+  connectTimeout: 30000,
+  ssl: process.env.NODE_ENV === 'production' ? { 
+    rejectUnauthorized: false 
+  } : null
 });
 
 // Test connection with better error handling
