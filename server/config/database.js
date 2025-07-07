@@ -3,14 +3,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-console.log('Database Config:', {
-  host: process.env.MYSQLHOST,
-  port: process.env.MYSQLPORT,
-  user: process.env.MYSQLUSER,
-  database: process.env.MYSQLDATABASE,
-  // Jangan log password
-});
-
 const pool = mysql.createPool({
   host: process.env.MYSQLHOST || 'localhost',
   port: parseInt(process.env.MYSQLPORT || '3306'),
@@ -20,37 +12,40 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  connectTimeout: 60000,
-  // Tambahan untuk debugging
+  connectTimeout: 120000, // 2 minutes
+  // IMPORTANT: Add SSL for Railway MySQL
   ssl: {
-    rejectUnauthorized: false
+    rejectUnauthorized: true
   }
 });
 
-// Test connection
+// Test connection with better error handling
 const testConnection = async () => {
-  try {
-    console.log('Attempting to connect to database...');
-    const connection = await pool.getConnection();
-    console.log('Database connected successfully!');
-    
-    // Test query
-    const [rows] = await connection.query('SELECT 1');
-    console.log('Test query successful:', rows);
-    
-    connection.release();
-  } catch (err) {
-    console.error('Database connection failed:', {
-      message: err.message,
-      code: err.code,
-      errno: err.errno,
-      syscall: err.syscall,
-      hostname: err.hostname
-    });
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      console.log(`Connection attempt ${4 - retries}...`);
+      const connection = await pool.getConnection();
+      console.log('✓ Database connected successfully!');
+      
+      const [rows] = await connection.query('SELECT 1 as test');
+      console.log('✓ Test query successful');
+      
+      connection.release();
+      return;
+    } catch (err) {
+      console.error(`Connection attempt failed:`, err.code);
+      retries--;
+      if (retries > 0) {
+        console.log(`Retrying in 5 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+    }
   }
+  console.error('Failed to connect after all retries');
 };
 
-// Delay connection test untuk Railway
-setTimeout(testConnection, 5000);
+// Start connection test after delay
+setTimeout(testConnection, 3000);
 
 export default pool;
