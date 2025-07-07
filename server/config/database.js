@@ -12,7 +12,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  connectTimeout: 120000,
+  connectTimeout: 2000,
   ssl: {
     rejectUnauthorized: false // Railway's public MySQL might need this
   }
