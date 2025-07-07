@@ -5,7 +5,7 @@ dotenv.config();
 
 const pool = mysql.createPool({
   host: process.env.MYSQLHOST || 'mysql-production-9548.up.railway.app',
-  port: parseInt(process.env.MYSQLPORT || '3386'), // or 3366 based on what works
+  port: parseInt(process.env.MYSQLPORT || '3306'), // or 3366 based on what works
   user: process.env.MYSQLUSER || 'root',
   password: process.env.MYSQLPASSWORD || 'RvLywKsDS1JfpWqnTQeG0AWhFXtCfYos', // verify exact password
   database: process.env.MYSQLDATABASE || 'railway',
