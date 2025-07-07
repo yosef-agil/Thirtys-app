@@ -11,9 +11,6 @@ import adminRoutes from './routes/admin.js';
 
 dotenv.config();
 
-import { fileURLToPath } from 'url';
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 // Serve static files
 app.use(express.static(path.join(__dirname, '../client/dist')));
 
