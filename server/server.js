@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
-import bookingRoutes from './routes/bookings.js';
+import bookingRoutes from './routes/booking.js';
 import serviceRoutes from './routes/services.js';
 import adminRoutes from './routes/admin.js';
 
