@@ -35,9 +35,14 @@ export const login = async (req, res) => {
       });
     }
 
+    // TAMBAHKAN role: 'admin' DI SINI
     const token = jwt.sign(
-      { id: admin.id, username: admin.username },
-      process.env.JWT_SECRET || 'your-secret-key', // Fallback jika env tidak ada
+      { 
+        id: admin.id, 
+        username: admin.username,
+        role: 'admin' // INI YANG MISSING!
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
 
@@ -46,7 +51,8 @@ export const login = async (req, res) => {
       token,
       admin: {
         id: admin.id,
-        username: admin.username
+        username: admin.username,
+        role: 'admin' // Opsional, untuk konsistensi
       }
     });
   } catch (error) {

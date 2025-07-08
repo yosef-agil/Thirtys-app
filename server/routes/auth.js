@@ -1,30 +1,33 @@
-import express from 'express';
-import bcrypt from 'bcryptjs';  // Tambahkan ini
-import { login, createAdmin } from '../controllers/authController.js';
-import { authenticateToken } from '../middleware/auth.js';
-import db from '../config/database.js';  // Tambahkan ini
+import jwt from 'jsonwebtoken';
 
-const router = express.Router();
+export const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-router.post('/login', login);
-router.post('/create-admin', authenticateToken, createAdmin);
-
-// Temporary endpoint untuk create admin
-router.post('/setup-admin', async (req, res) => {
-  try {
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    
-    await db.execute('DELETE FROM admins WHERE username = ?', ['admin']);
-    
-    await db.execute(
-      'INSERT INTO admins (username, password) VALUES (?, ?)',
-      ['admin', hashedPassword]
-    );
-    
-    res.json({ message: 'Admin created successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
   }
-});
 
-export default router;
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// TAMBAHKAN MIDDLEWARE INI
+export const requireAdmin = (req, res, next) => {
+  // Pastikan user sudah ter-authenticate
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  // Periksa role admin
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  next();
+};
