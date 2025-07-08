@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "start": "node server/server.js",
-    "build": "npm run install:server && npm run build:client",
-    "build:client": "cd client && npm install && npm run build",
-    "install:server": "cd server && npm install"
+    "build": "npm run install:all && npm run build:client",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build:client": "cd client && npm run build"
   },
   "engines": {
     "node": ">=18.0.0"
