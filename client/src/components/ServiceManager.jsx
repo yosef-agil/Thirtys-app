@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Textarea diganti dengan textarea HTML biasa
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -254,12 +254,10 @@ export default function ServiceManager() {
                   </div>
                   <div>
                     <Label htmlFor="description">Description</Label>
-                    <textarea
+                    <Textarea
                       id="description"
                       value={serviceForm.description}
                       onChange={(e) => setServiceForm({...serviceForm, description: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
-                      rows="3"
                     />
                   </div>
                   <div>
@@ -399,12 +397,10 @@ export default function ServiceManager() {
                   </div>
                   <div>
                     <Label htmlFor="pkg_description">Description</Label>
-                    <textarea
+                    <Textarea
                       id="pkg_description"
                       value={packageForm.description}
                       onChange={(e) => setPackageForm({...packageForm, description: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
-                      rows="3"
                     />
                   </div>
                   <div className="flex gap-2">
