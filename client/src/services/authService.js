@@ -1,31 +1,60 @@
-import api from './api';
+// client/src/stores/useAuthStore.js
+import { create } from 'zustand';
+import { authService } from '../services/authService';
 
-export const authService = {
+const useAuthStore = create((set) => ({
+  isAuthenticated: false,
+  admin: null,
+  
   login: async (credentials) => {
     try {
-      const response = await api.post('/auth/login', credentials);
-      const data = response.data;
+      const response = await authService.login(credentials);
       
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('admin', JSON.stringify(data.admin));
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('admin', JSON.stringify(response.admin));
+        
+        set({ 
+          isAuthenticated: true, 
+          admin: response.admin 
+        });
+        
+        return { success: true };
       }
       
-      return data;
+      return { 
+        success: false, 
+        error: 'Login failed' 
+      };
     } catch (error) {
-      if (error.response) {
-        throw new Error(error.response.data.error || 'Login failed');
-      }
-      throw error;
+      console.error('Login error:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Internal server error' 
+      };
     }
   },
-
+  
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('admin');
+    set({ isAuthenticated: false, admin: null });
   },
+  
+  checkAuth: () => {
+    const token = localStorage.getItem('token');
+    const adminData = localStorage.getItem('admin');
+    
+    if (token && adminData) {
+      set({ 
+        isAuthenticated: true, 
+        admin: JSON.parse(adminData) 
+      });
+      return true;
+    }
+    
+    return false;
+  },
+}));
 
-  isAuthenticated: () => {
-    return !!localStorage.getItem('token');
-  },
-};
+export default useAuthStore;

@@ -1,6 +1,7 @@
+// client/src/services/api.js
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://thirtys-code-production.up.railway.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -9,7 +10,7 @@ const api = axios.create({
   },
 });
 
-// Add token to requests
+// Request interceptor untuk menambahkan token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -23,14 +24,18 @@ api.interceptors.request.use(
   }
 );
 
-// Handle responses
+// Response interceptor untuk handle error
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('admin');
-      window.location.href = '/admin/login';
+      // Redirect to login if needed
+      if (window.location.pathname.startsWith('/admin') && 
+          !window.location.pathname.includes('/login')) {
+        window.location.href = '/admin/login';
+      }
     }
     return Promise.reject(error);
   }
