@@ -8,6 +8,7 @@ import bookingRoutes from './routes/bookings.js';
 import serviceRoutes from './routes/services.js';
 import adminRoutes from './routes/admin.js';
 import pool from './config/database.js'; // Pastikan ini ada
+import fs from 'fs';
 
 dotenv.config();
 
@@ -16,6 +17,11 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Middleware
 app.use(cors({
