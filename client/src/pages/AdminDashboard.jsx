@@ -1,104 +1,107 @@
-// client/src/pages/AdminDashboard.jsx
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import BookingTable from '@/components/BookingTable';
-import ServiceManager from '@/components/ServiceManager';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import BookingTable from '../components/BookingTable';
+import ServiceManager from '../components/ServiceManager';
+import api from '../services/api';
 
 export default function AdminDashboard() {
-  const [bookingStats, setBookingStats] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [stats, setStats] = useState({
+    monthlyRevenue: 0,
+    monthlyBookingsCount: 0,
+    pendingBookings: 0,
+    serviceStats: [],
+  });
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetchDashboardData();
+    loadDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const loadDashboardData = async () => {
     try {
       const [statsRes, bookingsRes] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch('/api/admin/bookings')
+        api.get('/admin/stats'),
+        api.get('/bookings'),
       ]);
       
-      const stats = await statsRes.json();
-      const bookingsData = await bookingsRes.json();
-      
-      setBookingStats(stats);
-      setBookings(bookingsData);
+      setStats(statsRes.data);
+      setBookings(bookingsRes.data);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load dashboard data',
+        variant: 'destructive',
+      });
     }
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
-      
-      <div className="grid gap-6 mb-8 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Bookings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{bookings.length}</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending Bookings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">
-              {bookings.filter(b => b.status === 'pending').length}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue This Month</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">
-              Rp {bookingStats.monthlyRevenue?.toLocaleString('id-ID') || 0}
-            </p>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto p-6">
+        <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+
+        {/* Stats Cards */}
+        <div className="grid gap-6 mb-8 md:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Total Bookings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{stats.monthlyBookingsCount}</p>
+              <p className="text-sm text-gray-500">This month</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Bookings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{stats.pendingBookings}</p>
+              <p className="text-sm text-gray-500">Awaiting confirmation</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Revenue</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">
+                Rp {stats.monthlyRevenue?.toLocaleString('id-ID') || 0}
+              </p>
+              <p className="text-sm text-gray-500">This month</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="bookings">
+          <TabsList className="mb-4">
+            <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="services">Services</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="bookings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Bookings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BookingTable bookings={bookings} onUpdate={loadDashboardData} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="services">
+            <ServiceManager />
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Monthly Bookings by Service</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={bookingStats.serviceStats || []}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="service" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#3b82f6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="bookings">
-        <TabsList>
-          <TabsTrigger value="bookings">Bookings</TabsTrigger>
-          <TabsTrigger value="services">Services</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="bookings">
-          <BookingTable bookings={bookings} onUpdate={fetchDashboardData} />
-        </TabsContent>
-        
-        <TabsContent value="services">
-          <ServiceManager />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
