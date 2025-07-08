@@ -302,30 +302,65 @@ export default function BookingTable({ bookings, onUpdate }) {
                   </CardHeader>
                   <CardContent>
                     <div className="border rounded-lg p-4 bg-gray-50">
-                      <img
-                        src={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
-                        alt="Payment Proof"
-                        className="max-w-full h-auto max-h-96 rounded mx-auto block"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'block';
-                        }}
-                      />
-                      <div className="hidden text-center text-gray-500 py-8">
-                        <p>Payment proof image not available</p>
-                        <p className="text-sm mb-2">File: {selectedBooking.payment_proof}</p>
-                        <div className="space-y-2">
-                          <a 
-                            href={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block text-blue-500 hover:underline text-sm"
-                          >
-                            Try direct link
-                          </a>
-                          <p className="text-xs text-gray-400">
-                            If image doesn't load, the file might not exist on the server
-                          </p>
+                      <div className="space-y-4">
+                        {/* Try multiple URL patterns */}
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <p className="text-sm font-medium mb-2">Direct URL:</p>
+                            <img
+                              src={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
+                              alt="Payment Proof"
+                              className="max-w-full h-auto max-h-96 rounded mx-auto block border"
+                              onLoad={() => console.log('Image loaded successfully')}
+                              onError={(e) => {
+                                console.log('Direct URL failed, trying alternative...');
+                                e.target.style.display = 'none';
+                                e.target.nextElementSibling.style.display = 'block';
+                              }}
+                            />
+                            <div className="hidden">
+                              <p className="text-sm font-medium mb-2">Alternative URL:</p>
+                              <img
+                                src={`https://thirtys-code-production.up.railway.app/${selectedBooking.payment_proof}`}
+                                alt="Payment Proof Alternative"
+                                className="max-w-full h-auto max-h-96 rounded mx-auto block border"
+                                onLoad={() => console.log('Alternative image loaded successfully')}
+                                onError={(e) => {
+                                  console.log('Alternative URL also failed');
+                                  e.target.style.display = 'none';
+                                  e.target.parentElement.nextElementSibling.style.display = 'block';
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="hidden text-center text-gray-500 py-8">
+                          <p className="mb-2">Payment proof image not available</p>
+                          <p className="text-sm mb-4">File: {selectedBooking.payment_proof}</p>
+                          <div className="space-y-2">
+                            <div className="flex flex-col gap-2">
+                              <a 
+                                href={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 hover:underline text-sm"
+                              >
+                                Try direct link (with /uploads/)
+                              </a>
+                              <a 
+                                href={`https://thirtys-code-production.up.railway.app/${selectedBooking.payment_proof}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 hover:underline text-sm"
+                              >
+                                Try alternative link (without /uploads/)
+                              </a>
+                            </div>
+                            <p className="text-xs text-gray-400 mt-4">
+                              If both links don't work, the file might not exist on the server or the static file serving is not configured properly.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -24,7 +24,9 @@ export const createBooking = async (req, res) => {
       timeSlotId,
       faculty,
       university,
-      paymentType
+      paymentType,
+      totalPrice,  // Full package price from frontend
+      paidAmount   // Amount actually paid from frontend
     } = req.body;
 
     // Validate required fields
@@ -33,9 +35,9 @@ export const createBooking = async (req, res) => {
     }
 
     const bookingCode = generateBookingCode();
-    const paymentProof = req.file ? `/uploads/${req.file.filename}` : null;
+    const paymentProof = req.file ? req.file.filename : null; // Store only filename, not full path
 
-    // Calculate total price
+    // Calculate full package price (for verification and fallback)
     const [packageData] = await connection.execute(
       'SELECT price FROM service_packages WHERE id = ?',
       [packageId]
@@ -45,7 +47,7 @@ export const createBooking = async (req, res) => {
       throw new Error('Package not found');
     }
 
-    let totalPrice = packageData[0].price;
+    let calculatedFullPrice = packageData[0].price;
 
     // Apply discount if any
     const [serviceData] = await connection.execute(
@@ -54,15 +56,22 @@ export const createBooking = async (req, res) => {
     );
 
     if (serviceData.length > 0 && serviceData[0].discount_percentage > 0) {
-      totalPrice = totalPrice * (1 - serviceData[0].discount_percentage / 100);
+      calculatedFullPrice = calculatedFullPrice * (1 - serviceData[0].discount_percentage / 100);
     }
 
-    // If down payment, calculate 50%
-    if (paymentType === 'down_payment') {
-      totalPrice = totalPrice * 0.5;
+    // Use frontend-provided totalPrice if available, otherwise use calculated
+    const finalFullPrice = totalPrice ? parseFloat(totalPrice) : calculatedFullPrice;
+    
+    // Calculate paid amount if not provided
+    let finalPaidAmount;
+    if (paidAmount) {
+      finalPaidAmount = parseFloat(paidAmount);
+    } else {
+      // Fallback calculation
+      finalPaidAmount = paymentType === 'down_payment' ? finalFullPrice * 0.5 : finalFullPrice;
     }
 
-    // Insert booking
+    // Insert booking with FULL PRICE (not paid amount)
     const [result] = await connection.execute(`
       INSERT INTO bookings (
         booking_code, customer_name, phone_number, service_id, package_id,
@@ -72,7 +81,8 @@ export const createBooking = async (req, res) => {
     `, [
       bookingCode, customerName, phoneNumber, serviceId, packageId,
       bookingDate, timeSlotId || null, faculty || null, university || null, 
-      totalPrice, paymentType, paymentProof
+      finalFullPrice, // Store FULL package price, not paid amount
+      paymentType, paymentProof
     ]);
 
     // Update time slot if applicable
@@ -89,7 +99,10 @@ export const createBooking = async (req, res) => {
       success: true,
       message: 'Booking created successfully',
       bookingCode,
-      bookingId: result.insertId
+      bookingId: result.insertId,
+      totalPrice: finalFullPrice,
+      paidAmount: finalPaidAmount,
+      remainingAmount: paymentType === 'down_payment' ? finalFullPrice - finalPaidAmount : 0
     });
 
   } catch (error) {

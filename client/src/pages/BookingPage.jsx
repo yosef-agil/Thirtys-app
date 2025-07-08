@@ -37,7 +37,13 @@ export default function BookingPage() {
   const [packages, setPackages] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
-  const [totalPrice, setTotalPrice] = useState(0);
+  const [totalPrice, setTotalPrice] = useState({
+    originalPrice: 0,
+    discountedPrice: 0,
+    paymentAmount: 0,
+    paymentType: '',
+    discountPercentage: 0
+  });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate(); // TAMBAHKAN INI
@@ -103,21 +109,31 @@ export default function BookingPage() {
       console.log('Found package:', pkg); // Debug log
       
       if (pkg) {
-        let price = pkg.price;
-        console.log('Base price:', price); // Debug log
+        let originalPrice = pkg.price;
+        console.log('Original price:', originalPrice); // Debug log
         
+        // Apply discount if any
+        let discountedPrice = originalPrice;
         if (selectedService?.discount_percentage) {
-          price = price * (1 - selectedService.discount_percentage / 100);
-          console.log('Price after discount:', price); // Debug log
+          discountedPrice = originalPrice * (1 - selectedService.discount_percentage / 100);
+          console.log('Price after discount:', discountedPrice); // Debug log
         }
         
+        // Calculate payment amount based on type
+        let paymentAmount = discountedPrice;
         if (watchPaymentType === 'down_payment') {
-          price = price * 0.5;
-          console.log('Price after down payment:', price); // Debug log
+          paymentAmount = discountedPrice * 0.5;
+          console.log('Down payment amount:', paymentAmount); // Debug log
         }
         
-        setTotalPrice(price);
-        console.log('Final total price:', price); // Debug log
+        setTotalPrice({
+          originalPrice,
+          discountedPrice,
+          paymentAmount,
+          paymentType: watchPaymentType,
+          discountPercentage: selectedService?.discount_percentage || 0
+        });
+        console.log('Final price object:', { originalPrice, discountedPrice, paymentAmount }); // Debug log
       }
     }
   }, [watchPackage, watchPaymentType, packages, selectedService]);
@@ -390,16 +406,70 @@ export default function BookingPage() {
                 <p>Packages available: {packages.length}</p>
                 <p>Selected package ID: {watchPackage || 'None'}</p>
                 <p>Payment type: {watchPaymentType || 'None'}</p>
-                <p>Total price: {totalPrice}</p>
+                <p>Total price object: {JSON.stringify(totalPrice)}</p>
                 <p>Form errors: {Object.keys(errors).length > 0 ? Object.keys(errors).join(', ') : 'None'}</p>
               </div>
 
-              {/* Total Price */}
-              {totalPrice > 0 && (
+              {/* Price Summary */}
+              {totalPrice.paymentAmount > 0 && (
+                <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-4">Payment Summary</h3>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span>Package Price:</span>
+                      <span>Rp {totalPrice.originalPrice.toLocaleString('id-ID')}</span>
+                    </div>
+                    
+                    {totalPrice.discountPercentage > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Discount ({totalPrice.discountPercentage}%):</span>
+                        <span>-Rp {(totalPrice.originalPrice - totalPrice.discountedPrice).toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    
+                    {totalPrice.discountPercentage > 0 && (
+                      <div className="flex justify-between border-t pt-2">
+                        <span>After Discount:</span>
+                        <span>Rp {totalPrice.discountedPrice.toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    
+                    <div className="border-t pt-3">
+                      {totalPrice.paymentType === 'down_payment' ? (
+                        <>
+                          <div className="flex justify-between font-semibold text-lg text-blue-600">
+                            <span>Down Payment (50%):</span>
+                            <span>Rp {totalPrice.paymentAmount.toLocaleString('id-ID')}</span>
+                          </div>
+                          <div className="flex justify-between text-sm text-gray-600 mt-1">
+                            <span>Remaining Payment:</span>
+                            <span>Rp {(totalPrice.discountedPrice - totalPrice.paymentAmount).toLocaleString('id-ID')}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between font-semibold text-lg text-green-600">
+                          <span>Full Payment:</span>
+                          <span>Rp {totalPrice.paymentAmount.toLocaleString('id-ID')}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Old Total Price - Keep for backward compatibility */}
+              {/* Old Total Price - Keep for backward compatibility */}
+              {totalPrice.paymentAmount > 0 && (
                 <div className="bg-gray-100 p-4 rounded-lg">
                   <p className="text-lg font-semibold">
-                    Total Price: Rp {totalPrice.toLocaleString('id-ID')}
+                    You Pay Now: Rp {totalPrice.paymentAmount.toLocaleString('id-ID')}
                   </p>
+                  {totalPrice.paymentType === 'down_payment' && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      (Remaining: Rp {(totalPrice.discountedPrice - totalPrice.paymentAmount).toLocaleString('id-ID')})
+                    </p>
+                  )}
                 </div>
               )}
 
