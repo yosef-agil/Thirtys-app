@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // Tambahkan import ini
+import { useNavigate } from 'react-router-dom'; // HANYA TAMBAHKAN INI
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -40,7 +40,7 @@ export default function BookingPage() {
   const [totalPrice, setTotalPrice] = useState(0);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate(); // Tambahkan ini
+  const navigate = useNavigate(); // TAMBAHKAN INI
 
   const {
     register,
@@ -114,60 +114,53 @@ export default function BookingPage() {
   };
 
   const onSubmit = async (data) => {
-    console.log('Form submitted with data:', data); // Debug log
-    setLoading(true);
+  setLoading(true);
+  
+  try {
+    const formData = new FormData();
     
-    try {
-      const formData = new FormData();
-      
-      // Add all fields to FormData
-      formData.append('customerName', data.customerName);
-      formData.append('phoneNumber', data.phoneNumber);
-      formData.append('serviceId', data.serviceId);
-      formData.append('packageId', data.packageId);
-      formData.append('bookingDate', format(data.bookingDate, 'yyyy-MM-dd'));
-      formData.append('paymentType', data.paymentType);
-      
-      // Optional fields
-      if (data.timeSlotId) formData.append('timeSlotId', data.timeSlotId);
-      if (data.faculty) formData.append('faculty', data.faculty);
-      if (data.university) formData.append('university', data.university);
-      
-      // File upload
-      if (data.paymentProof && data.paymentProof[0]) {
-        formData.append('paymentProof', data.paymentProof[0]);
-      }
-
-      console.log('Sending form data...'); // Debug log
-
-      const response = await bookingService.createBooking(formData);
-      
-      console.log('Booking response:', response); // Debug log
-      
-      if (response.success) {
-        toast({
-          title: 'Booking Successful!',
-          description: `Your booking code is ${response.bookingCode}. We will contact you via WhatsApp soon.`,
-        });
-        
-        // Reset form or redirect
-        setTimeout(() => {
-          navigate('/');
-        }, 3000);
-      } else {
-        throw new Error(response.message || 'Booking failed');
-      }
-    } catch (error) {
-      console.error('Booking error:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || error.message || 'Failed to create booking',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+    // Add all fields to FormData
+    formData.append('customerName', data.customerName);
+    formData.append('phoneNumber', data.phoneNumber);
+    formData.append('serviceId', data.serviceId);
+    formData.append('packageId', data.packageId);
+    formData.append('bookingDate', format(data.bookingDate, 'yyyy-MM-dd'));
+    formData.append('paymentType', data.paymentType);
+    
+    // Optional fields
+    if (data.timeSlotId) formData.append('timeSlotId', data.timeSlotId);
+    if (data.faculty) formData.append('faculty', data.faculty);
+    if (data.university) formData.append('university', data.university);
+    
+    // File upload
+    if (data.paymentProof && data.paymentProof[0]) {
+      formData.append('paymentProof', data.paymentProof[0]);
     }
-  };
+
+    const response = await bookingService.createBooking(formData);
+    
+    if (response.success) {
+      toast({
+        title: 'Booking Successful!',
+        description: `Your booking code is ${response.bookingCode}. We will contact you via WhatsApp soon.`,
+      });
+      
+      // Reset form or redirect
+      setTimeout(() => {
+        navigate('/');
+      }, 3000);
+    }
+    } catch (error) {
+        console.error('Booking error:', error);
+        toast({
+        title: 'Error',
+        description: error.message || 'Failed to create booking',
+        variant: 'destructive',
+        });
+    } finally {
+        setLoading(false);
+    }
+    };
 
   const isGraduationPhotography = selectedService?.name === 'Graduation Photography';
 
@@ -346,18 +339,6 @@ export default function BookingPage() {
                   <p className="text-lg font-semibold">
                     Total Price: Rp {totalPrice.toLocaleString('id-ID')}
                   </p>
-                </div>
-              )}
-
-              {/* Debug Info - Hapus setelah testing */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="bg-yellow-100 p-4 rounded-lg text-xs">
-                  <p><strong>Debug Info:</strong></p>
-                  <p>Service: {watchService}</p>
-                  <p>Package: {watchPackage}</p>
-                  <p>Date: {watchDate ? format(watchDate, 'yyyy-MM-dd') : 'Not selected'}</p>
-                  <p>Payment: {watchPaymentType}</p>
-                  <p>Total Price: {totalPrice}</p>
                 </div>
               )}
 
