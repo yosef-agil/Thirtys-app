@@ -3,48 +3,35 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+console.log('Connecting to MySQL:', {
+  host: process.env.MYSQLHOST,
+  port: process.env.MYSQLPORT,
+  database: process.env.MYSQLDATABASE
+});
+
 const pool = mysql.createPool({
-  host: process.env.MYSQLHOST || 'mysql.railway.internal', // Gunakan internal jika aplikasi di Railway
-  port: parseInt(process.env.MYSQLPORT || '3306'), // PORT YANG BENAR ADALAH 3306
+  host: process.env.MYSQLHOST || 'localhost',
+  port: parseInt(process.env.MYSQLPORT || '3306'),
   user: process.env.MYSQLUSER || 'root',
-  password: process.env.MYSQLPASSWORD || 'exukDrnRAsQnBIXQJdJTkCiitladjWvX',
+  password: process.env.MYSQLPASSWORD || '',
   database: process.env.MYSQLDATABASE || 'railway',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  connectTimeout: 5000,
-  ssl: process.env.NODE_ENV === 'production' ? { 
+  connectTimeout: 60000,
+  ssl: { 
     rejectUnauthorized: false 
-  } : null
+  }
 });
 
-// Test connection with better error handling
-const testConnection = async () => {
-  let retries = 3;
-  while (retries > 0) {
-    try {
-      console.log(`Connection attempt ${4 - retries}...`);
-      const connection = await pool.getConnection();
-      console.log('✓ Database connected successfully!');
-      
-      const [rows] = await connection.query('SELECT 1 as test');
-      console.log('✓ Test query successful');
-      
-      connection.release();
-      return;
-    } catch (err) {
-      console.error(`Connection attempt failed:`, err.code);
-      retries--;
-      if (retries > 0) {
-        console.log(`Retrying in 5 seconds...`);
-        await new Promise(resolve => setTimeout(resolve, 5000));
-      }
-    }
-  }
-  console.error('Failed to connect after all retries');
-};
-
-// Start connection test after delay
-setTimeout(testConnection, 3000);
+// Test connection
+pool.getConnection()
+  .then(connection => {
+    console.log('✅ Database connected successfully!');
+    connection.release();
+  })
+  .catch(err => {
+    console.error('❌ Database connection failed:', err);
+  });
 
 export default pool;
