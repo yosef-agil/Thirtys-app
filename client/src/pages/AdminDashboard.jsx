@@ -19,29 +19,53 @@ export default function AdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem('token');
-      const admin = localStorage.getItem('admin');
-      
-      if (!token || !admin) {
-        navigate('/admin/login');
-        return;
+    const checkAuthAndLoadData = async () => {
+      try {
+        setLoading(true);
+        
+        // Check localStorage first
+        const token = localStorage.getItem('token');
+        const admin = localStorage.getItem('admin');
+        
+        if (!token || !admin) {
+          console.log('No token or admin found, redirecting to login');
+          navigate('/admin/login', { replace: true });
+          return;
+        }
+        
+        // Set authenticated state
+        setIsAuthenticated(true);
+        
+        // Load dashboard data
+        await loadDashboardData();
+        
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        
+        // If API call fails, check if it's auth related
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('admin');
+          navigate('/admin/login', { replace: true });
+        } else {
+          setError('Failed to load dashboard data');
+          setIsAuthenticated(true); // Keep user logged in for other errors
+        }
+      } finally {
+        setLoading(false);
       }
-      
-      // Langsung load dashboard tanpa verifikasi ke server
-      loadDashboardData();
     };
     
-    checkAuth();
+    checkAuthAndLoadData();
   }, [navigate]);
 
   const loadDashboardData = async () => {
     try {
-      setLoading(true);
       setError(null);
       
       const [statsRes, bookingsRes] = await Promise.all([
@@ -53,48 +77,65 @@ export default function AdminDashboard() {
       setBookings(bookingsRes.data);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
-      setError('Failed to load dashboard data');
       
-      // Jika error 401/403, kemungkinan token expired
+      // If auth error during data loading, redirect
       if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem('token');
         localStorage.removeItem('admin');
-        navigate('/admin/login');
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to load dashboard data',
-          variant: 'destructive',
-        });
+        navigate('/admin/login', { replace: true });
+        return;
       }
-    } finally {
-      setLoading(false);
+      
+      // For other errors, show error but keep user logged in
+      setError('Failed to load dashboard data');
+      toast({
+        title: 'Error',
+        description: 'Failed to load dashboard data',
+        variant: 'destructive',
+      });
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('admin');
-    navigate('/admin/login');
+    navigate('/admin/login', { replace: true });
   };
 
+  // Show loading while checking auth
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  // Don't render anything if not authenticated (prevent flash)
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Show error state but keep dashboard structure
+  if (error && bookings.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={loadDashboardData}>Retry</Button>
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto p-6">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+          
+          <div className="text-center py-12">
+            <p className="text-red-600 mb-4 text-lg">{error}</p>
+            <Button onClick={loadDashboardData}>Retry Loading Data</Button>
+          </div>
         </div>
       </div>
     );
@@ -111,6 +152,16 @@ export default function AdminDashboard() {
             Logout
           </Button>
         </div>
+
+        {/* Error Banner (if error but data exists) */}
+        {error && bookings.length > 0 && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600">{error}</p>
+            <Button variant="outline" size="sm" onClick={loadDashboardData} className="mt-2">
+              Retry
+            </Button>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid gap-6 mb-8 md:grid-cols-3">
