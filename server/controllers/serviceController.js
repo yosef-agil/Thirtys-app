@@ -96,6 +96,28 @@ export const deleteService = async (req, res) => {
   }
 };
 
+// Time Slots
+export const getTimeSlots = async (req, res) => {
+  try {
+    const { serviceId } = req.params;
+    const { date } = req.query;
+    
+    if (!date) {
+      return res.status(400).json({ error: 'Date parameter is required' });
+    }
+    
+    const [slots] = await db.execute(
+      'SELECT * FROM time_slots WHERE service_id = ? AND date = ? AND is_booked = FALSE ORDER BY start_time',
+      [serviceId, date]
+    );
+    
+    res.json(slots);
+  } catch (error) {
+    console.error('Get time slots error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // Service Packages CRUD
 export const getAllPackages = async (req, res) => {
   try {
