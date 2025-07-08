@@ -1,6 +1,17 @@
 // client/src/stores/useAuthStore.js
 import { create } from 'zustand';
-import { authService } from '../services/authService';
+import api from './api'; // Pastikan import path benar
+
+export const authService = {
+  login: async (credentials) => {
+    try {
+      const response = await api.post('/admin/login', credentials);
+      return response.data; // Pastikan backend mengembalikan {token, admin}
+    } catch (error) {
+      throw error; // Biarkan error ditangkap oleh useAuthStore
+    }
+  }
+};
 
 const useAuthStore = create((set) => ({
   isAuthenticated: false,
