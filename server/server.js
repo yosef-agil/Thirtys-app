@@ -1,14 +1,25 @@
+// import express from 'express';
+// import cors from 'cors';
+// import dotenv from 'dotenv';
+// import path from 'path';
+// import { fileURLToPath } from 'url';
+// import authRoutes from './routes/auth.js';
+// import bookingRoutes from './routes/bookings.js';
+// import serviceRoutes from './routes/services.js';
+// import adminRoutes from './routes/admin.js';
+// import pool from './config/database.js'; // Pastikan ini ada
+// import fs from 'fs';
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import authRoutes from './routes/auth.js';
 import bookingRoutes from './routes/bookings.js';
 import serviceRoutes from './routes/services.js';
 import adminRoutes from './routes/admin.js';
-import pool from './config/database.js'; // Pastikan ini ada
-import fs from 'fs';
 
 dotenv.config();
 
@@ -18,16 +29,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Create uploads directory
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('Uploads directory created');
 }
 
 // Middleware
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'http://localhost:3000',
+    'http://localhost:3000', 
     'https://thirtys-code-production.up.railway.app'
   ],
   credentials: true
@@ -36,18 +49,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(path.join(__dirname, '../client/dist')));
-
-// Test database connection
-try {
-  const conn = await pool.getConnection();
-  console.log('✅ Connected to MySQL database!');
-  conn.release();
-} catch (err) {
-  console.error('❌ Database connection failed:', err);
-  process.exit(1);
-}
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -63,10 +66,9 @@ app.get('*', (req, res) => {
 // Error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: err.message || 'Something went wrong!' });
+  res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
