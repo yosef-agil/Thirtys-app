@@ -42,7 +42,7 @@ export const login = async (req, res) => {
         username: admin.username,
         role: 'admin' // INI YANG MISSING!
       },
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET || '7b1X8zZRsRAxvrrQLD3m0knH773By7KHaI0YAYLvtNw',
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
 
