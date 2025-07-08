@@ -22,17 +22,45 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const admin = localStorage.getItem('admin');
+    const checkAuthAndLoadData = async () => {
+      try {
+        setLoading(true);
+        
+        // Check localStorage first
+        const token = localStorage.getItem('token');
+        const admin = localStorage.getItem('admin');
+        
+        if (!token || !admin) {
+          console.log('No token or admin found, redirecting to login');
+          // Use window.location for more reliable redirect
+          window.location.href = '/admin/login';
+          return;
+        }
+        
+        // Set authenticated state
+        setIsAuthenticated(true);
+        
+        // Load dashboard data
+        await loadDashboardData();
+        
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        
+        // If API call fails, check if it's auth related
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('admin');
+          window.location.href = '/admin/login';
+        } else {
+          setError('Failed to load dashboard data');
+          setIsAuthenticated(true); // Keep user logged in for other errors
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    if (!token || !admin) {
-      window.location.replace('/admin/login');
-      return;
-    }
-    
-    setIsAuthenticated(true);
-    setLoading(false);
-    loadDashboardData();
+    checkAuthAndLoadData();
   }, []);
 
   const loadDashboardData = async () => {
