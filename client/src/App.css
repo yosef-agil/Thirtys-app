@@ -3,6 +3,16 @@
 @tailwind components;
 @tailwind utilities;
 
+[data-radix-select-content] {
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+.select-content {
+  animation: none !important;
+}
+
 /* Smooth transitions */
 * {
   transition: all 0.2s ease;

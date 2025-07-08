@@ -69,3 +69,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+[data-radix-select-content] {
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+.select-content {
+  animation: none !important;
+}
