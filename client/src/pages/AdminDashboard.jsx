@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { LogOut } from 'lucide-react';
 import BookingTable from '../components/BookingTable';
 import ServiceManager from '../components/ServiceManager';
 import api from '../services/api';
@@ -15,31 +17,44 @@ export default function AdminDashboard() {
     pendingBookings: 0,
     serviceStats: [],
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
-      if (!token) {
+      const admin = localStorage.getItem('admin');
+      
+      if (!token || !admin) {
         navigate('/admin/login');
         return;
       }
       
       try {
-        // Verify token masih valid
-        await api.get('/auth/verify');
-        loadDashboardData();
+        // Optional: Verify token dengan backend
+        // await api.get('/auth/verify');
+        
+        // Jika token ada, langsung load dashboard
+        await loadDashboardData();
       } catch (error) {
+        console.error('Auth check failed:', error);
+        // Jika gagal, hapus token dan redirect
         localStorage.removeItem('token');
+        localStorage.removeItem('admin');
         navigate('/admin/login');
       }
     };
     
     checkAuth();
-  }, []);
+  }, [navigate]);
 
   const loadDashboardData = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const [statsRes, bookingsRes] = await Promise.all([
         api.get('/admin/stats'),
         api.get('/bookings'),
@@ -48,18 +63,65 @@ export default function AdminDashboard() {
       setStats(statsRes.data);
       setBookings(bookingsRes.data);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load dashboard data',
-        variant: 'destructive',
-      });
+      console.error('Failed to load dashboard data:', error);
+      setError('Failed to load dashboard data');
+      
+      // Jika error 401/403, kemungkinan token expired
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('admin');
+        navigate('/admin/login');
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to load dashboard data',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('admin');
+    navigate('/admin/login');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={loadDashboardData}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
 
         {/* Stats Cards */}
         <div className="grid gap-6 mb-8 md:grid-cols-3">
