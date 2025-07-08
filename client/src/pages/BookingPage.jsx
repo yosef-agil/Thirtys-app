@@ -349,6 +349,18 @@ export default function BookingPage() {
                 </div>
               )}
 
+              {/* Debug Info - Hapus setelah testing */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="bg-yellow-100 p-4 rounded-lg text-xs">
+                  <p><strong>Debug Info:</strong></p>
+                  <p>Service: {watchService}</p>
+                  <p>Package: {watchPackage}</p>
+                  <p>Date: {watchDate ? format(watchDate, 'yyyy-MM-dd') : 'Not selected'}</p>
+                  <p>Payment: {watchPaymentType}</p>
+                  <p>Total Price: {totalPrice}</p>
+                </div>
+              )}
+
               {/* Submit Button */}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Processing...' : 'Submit Booking'}
