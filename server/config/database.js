@@ -7,7 +7,7 @@ const pool = mysql.createPool({
   host: process.env.MYSQLHOST || 'mysql.railway.internal', // Gunakan internal jika aplikasi di Railway
   port: parseInt(process.env.MYSQLPORT || '3306'), // PORT YANG BENAR ADALAH 3306
   user: process.env.MYSQLUSER || 'root',
-  password: process.env.MYSQLPASSWORD || 'RvLywKsDS1JfpWqnTQeG0AWhFXtCfYos',
+  password: process.env.MYSQLPASSWORD || 'exukDrnRAsQnBIXQJdJTkCiitladjWvX',
   database: process.env.MYSQLDATABASE || 'railway',
   waitForConnections: true,
   connectionLimit: 10,
