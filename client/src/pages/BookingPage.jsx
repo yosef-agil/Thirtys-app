@@ -63,11 +63,32 @@ export default function BookingPage() {
 
   useEffect(() => {
     if (watchService) {
+      console.log('Service changed to:', watchService); // Debug log
       const service = services.find(s => s.id.toString() === watchService);
+      console.log('Found service:', service); // Debug log
+      
       setSelectedService(service);
-      setPackages(service?.packages || []);
+      
+      if (service?.packages) {
+        console.log('Setting packages:', service.packages); // Debug log
+        setPackages(service.packages);
+      } else {
+        // Fallback: load packages separately
+        loadPackagesForService(watchService);
+      }
     }
   }, [watchService, services]);
+
+  const loadPackagesForService = async (serviceId) => {
+    try {
+      const packages = await bookingService.getPackagesByService(serviceId);
+      console.log('Loaded packages for service:', packages); // Debug log
+      setPackages(packages);
+    } catch (error) {
+      console.error('Failed to load packages for service:', error);
+      setPackages([]);
+    }
+  };
 
   useEffect(() => {
     if (watchService && watchDate && selectedService?.has_time_slots) {
@@ -77,16 +98,26 @@ export default function BookingPage() {
 
   useEffect(() => {
     if (watchPackage && watchPaymentType) {
+      console.log('Calculating price for package:', watchPackage, 'payment type:', watchPaymentType); // Debug log
       const pkg = packages.find(p => p.id.toString() === watchPackage);
+      console.log('Found package:', pkg); // Debug log
+      
       if (pkg) {
         let price = pkg.price;
+        console.log('Base price:', price); // Debug log
+        
         if (selectedService?.discount_percentage) {
           price = price * (1 - selectedService.discount_percentage / 100);
+          console.log('Price after discount:', price); // Debug log
         }
+        
         if (watchPaymentType === 'down_payment') {
           price = price * 0.5;
+          console.log('Price after down payment:', price); // Debug log
         }
+        
         setTotalPrice(price);
+        console.log('Final total price:', price); // Debug log
       }
     }
   }, [watchPackage, watchPaymentType, packages, selectedService]);
@@ -94,8 +125,25 @@ export default function BookingPage() {
   const loadServices = async () => {
     try {
       const data = await bookingService.getServices();
-      setServices(data);
+      console.log('Loaded services:', data); // Debug log
+      
+      // Pastikan services memiliki packages
+      const servicesWithPackages = await Promise.all(
+        data.map(async (service) => {
+          try {
+            const packages = await bookingService.getPackagesByService(service.id);
+            return { ...service, packages };
+          } catch (error) {
+            console.error(`Failed to load packages for service ${service.id}:`, error);
+            return { ...service, packages: [] };
+          }
+        })
+      );
+      
+      console.log('Services with packages:', servicesWithPackages); // Debug log
+      setServices(servicesWithPackages);
     } catch (error) {
+      console.error('Failed to load services:', error);
       toast({
         title: 'Error',
         description: 'Failed to load services',
@@ -331,6 +379,19 @@ export default function BookingPage() {
                 {errors.paymentProof && (
                   <p className="text-sm text-red-500">{errors.paymentProof.message}</p>
                 )}
+              </div>
+
+              {/* Debug Panel - Hapus setelah testing */}
+              <div className="bg-blue-50 p-4 rounded-lg text-sm">
+                <p><strong>Debug Info:</strong></p>
+                <p>Services loaded: {services.length}</p>
+                <p>Selected service ID: {watchService || 'None'}</p>
+                <p>Selected service: {selectedService?.name || 'None'}</p>
+                <p>Packages available: {packages.length}</p>
+                <p>Selected package ID: {watchPackage || 'None'}</p>
+                <p>Payment type: {watchPaymentType || 'None'}</p>
+                <p>Total price: {totalPrice}</p>
+                <p>Form errors: {Object.keys(errors).length > 0 ? Object.keys(errors).join(', ') : 'None'}</p>
               </div>
 
               {/* Total Price */}

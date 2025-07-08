@@ -7,6 +7,11 @@ export const bookingService = {
     return response.data;
   },
   
+  getPackagesByService: async (serviceId) => {
+    const response = await api.get(`/services/${serviceId}/packages`);
+    return response.data;
+  },
+  
   getTimeSlots: async (serviceId, date) => {
     const response = await api.get(`/services/${serviceId}/time-slots?date=${date}`);
     return response.data;
