@@ -114,6 +114,7 @@ export default function BookingPage() {
   };
 
   const onSubmit = async (data) => {
+    console.log('Form submitted with data:', data); // Debug log
     setLoading(true);
     
     try {
@@ -137,7 +138,11 @@ export default function BookingPage() {
         formData.append('paymentProof', data.paymentProof[0]);
       }
 
+      console.log('Sending form data...'); // Debug log
+
       const response = await bookingService.createBooking(formData);
+      
+      console.log('Booking response:', response); // Debug log
       
       if (response.success) {
         toast({
@@ -149,12 +154,14 @@ export default function BookingPage() {
         setTimeout(() => {
           navigate('/');
         }, 3000);
+      } else {
+        throw new Error(response.message || 'Booking failed');
       }
     } catch (error) {
       console.error('Booking error:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create booking',
+        description: error.response?.data?.message || error.message || 'Failed to create booking',
         variant: 'destructive',
       });
     } finally {

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -21,7 +20,6 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuthAndLoadData = async () => {
@@ -34,7 +32,8 @@ export default function AdminDashboard() {
         
         if (!token || !admin) {
           console.log('No token or admin found, redirecting to login');
-          navigate('/admin/login', { replace: true });
+          // Use window.location for more reliable redirect
+          window.location.href = '/admin/login';
           return;
         }
         
@@ -51,7 +50,7 @@ export default function AdminDashboard() {
         if (error.response?.status === 401 || error.response?.status === 403) {
           localStorage.removeItem('token');
           localStorage.removeItem('admin');
-          navigate('/admin/login', { replace: true });
+          window.location.href = '/admin/login';
         } else {
           setError('Failed to load dashboard data');
           setIsAuthenticated(true); // Keep user logged in for other errors
@@ -62,7 +61,7 @@ export default function AdminDashboard() {
     };
     
     checkAuthAndLoadData();
-  }, [navigate]);
+  }, []);
 
   const loadDashboardData = async () => {
     try {
@@ -82,7 +81,7 @@ export default function AdminDashboard() {
       if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem('token');
         localStorage.removeItem('admin');
-        navigate('/admin/login', { replace: true });
+        window.location.href = '/admin/login';
         return;
       }
       
@@ -99,7 +98,7 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('admin');
-    navigate('/admin/login', { replace: true });
+    window.location.href = '/admin/login';
   };
 
   // Show loading while checking auth
