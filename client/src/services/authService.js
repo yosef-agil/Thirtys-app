@@ -4,12 +4,8 @@ import api from './api'; // Pastikan import path benar
 
 export const authService = {
   login: async (credentials) => {
-    try {
-      const response = await api.post('/admin/login', credentials);
-      return response.data; // Pastikan backend mengembalikan {token, admin}
-    } catch (error) {
-      throw error; // Biarkan error ditangkap oleh useAuthStore
-    }
+    const response = await api.post('/auth/login', credentials); // Ganti ke /auth/login
+    return response.data;
   }
 };
 
