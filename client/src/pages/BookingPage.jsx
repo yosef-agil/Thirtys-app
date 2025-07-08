@@ -398,7 +398,7 @@ export default function BookingPage() {
               </div>
 
               {/* Debug Panel - Hapus setelah testing */}
-              <div className="bg-blue-50 p-4 rounded-lg text-sm">
+              {/* <div className="bg-blue-50 p-4 rounded-lg text-sm">
                 <p><strong>Debug Info:</strong></p>
                 <p>Services loaded: {services.length}</p>
                 <p>Selected service ID: {watchService || 'None'}</p>
@@ -408,7 +408,7 @@ export default function BookingPage() {
                 <p>Payment type: {watchPaymentType || 'None'}</p>
                 <p>Total price object: {JSON.stringify(totalPrice)}</p>
                 <p>Form errors: {Object.keys(errors).length > 0 ? Object.keys(errors).join(', ') : 'None'}</p>
-              </div>
+              </div> */}
 
               {/* Price Summary */}
               {totalPrice.paymentAmount > 0 && (
