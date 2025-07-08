@@ -112,38 +112,53 @@ export default function BookingPage() {
   };
 
   const onSubmit = async (data) => {
-    setLoading(true);
+  setLoading(true);
+  
+  try {
     const formData = new FormData();
     
-    Object.keys(data).forEach(key => {
-      if (key === 'bookingDate') {
-        formData.append(key, format(data[key], 'yyyy-MM-dd'));
-      } else if (key === 'paymentProof') {
-        if (data[key] && data[key][0]) {
-          formData.append(key, data[key][0]);
-        }
-      } else if (data[key]) {
-        formData.append(key, data[key]);
-      }
-    });
+    // Add all fields to FormData
+    formData.append('customerName', data.customerName);
+    formData.append('phoneNumber', data.phoneNumber);
+    formData.append('serviceId', data.serviceId);
+    formData.append('packageId', data.packageId);
+    formData.append('bookingDate', format(data.bookingDate, 'yyyy-MM-dd'));
+    formData.append('paymentType', data.paymentType);
+    
+    // Optional fields
+    if (data.timeSlotId) formData.append('timeSlotId', data.timeSlotId);
+    if (data.faculty) formData.append('faculty', data.faculty);
+    if (data.university) formData.append('university', data.university);
+    
+    // File upload
+    if (data.paymentProof && data.paymentProof[0]) {
+      formData.append('paymentProof', data.paymentProof[0]);
+    }
 
-    try {
-      await bookingService.createBooking(formData);
+    const response = await bookingService.createBooking(formData);
+    
+    if (response.success) {
       toast({
         title: 'Booking Successful!',
-        description: 'We will contact you via WhatsApp soon.',
+        description: `Your booking code is ${response.bookingCode}. We will contact you via WhatsApp soon.`,
       });
+      
       // Reset form or redirect
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Failed to create booking',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+      setTimeout(() => {
+        navigate('/');
+      }, 3000);
     }
-  };
+    } catch (error) {
+        console.error('Booking error:', error);
+        toast({
+        title: 'Error',
+        description: error.message || 'Failed to create booking',
+        variant: 'destructive',
+        });
+    } finally {
+        setLoading(false);
+    }
+    };
 
   const isGraduationPhotography = selectedService?.name === 'Graduation Photography';
 

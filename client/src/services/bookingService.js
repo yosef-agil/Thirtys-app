@@ -15,13 +15,20 @@ export const bookingService = {
     return response.data;
   },
 
-  // Create booking
+  // Create booking - Updated
   createBooking: async (formData) => {
-    const response = await api.post('/bookings', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    try {
+      const response = await api.post('/bookings', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        throw new Error(error.response.data.error || 'Failed to create booking');
+      }
+      throw error;
+    }
   },
 };

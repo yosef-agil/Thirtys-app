@@ -20,6 +20,7 @@ import authRoutes from './routes/auth.js';
 import bookingRoutes from './routes/bookings.js';
 import serviceRoutes from './routes/services.js';
 import adminRoutes from './routes/admin.js';
+import pool from './config/database.js';
 
 dotenv.config();
 
@@ -72,3 +73,15 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+// Test database connection on startup
+const testDbConnection = async () => {
+  try {
+    const [rows] = await pool.execute('SELECT 1');
+    console.log('✅ Database connection test successful');
+  } catch (error) {
+    console.error('❌ Database connection test failed:', error);
+  }
+};
+
+testDbConnection();

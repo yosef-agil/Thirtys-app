@@ -11,6 +11,10 @@ export const createBooking = async (req, res) => {
   try {
     await connection.beginTransaction();
 
+    // Debug log
+    console.log('Request body:', req.body);
+    console.log('Request file:', req.file);
+
     const {
       customerName,
       phoneNumber,
@@ -23,8 +27,13 @@ export const createBooking = async (req, res) => {
       paymentType
     } = req.body;
 
+    // Validate required fields
+    if (!customerName || !phoneNumber || !serviceId || !packageId || !bookingDate || !paymentType) {
+      throw new Error('Missing required fields');
+    }
+
     const bookingCode = generateBookingCode();
-    const paymentProof = req.file ? req.file.filename : null;
+    const paymentProof = req.file ? `/uploads/${req.file.filename}` : null;
 
     // Calculate total price
     const [packageData] = await connection.execute(
@@ -44,7 +53,7 @@ export const createBooking = async (req, res) => {
       [serviceId]
     );
 
-    if (serviceData[0].discount_percentage > 0) {
+    if (serviceData.length > 0 && serviceData[0].discount_percentage > 0) {
       totalPrice = totalPrice * (1 - serviceData[0].discount_percentage / 100);
     }
 
@@ -58,12 +67,12 @@ export const createBooking = async (req, res) => {
       INSERT INTO bookings (
         booking_code, customer_name, phone_number, service_id, package_id,
         booking_date, time_slot_id, faculty, university, total_price,
-        payment_type, payment_proof, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+        payment_type, payment_proof, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
     `, [
       bookingCode, customerName, phoneNumber, serviceId, packageId,
-      bookingDate, timeSlotId, faculty, university, totalPrice,
-      paymentType, paymentProof
+      bookingDate, timeSlotId || null, faculty || null, university || null, 
+      totalPrice, paymentType, paymentProof
     ]);
 
     // Update time slot if applicable
@@ -77,6 +86,7 @@ export const createBooking = async (req, res) => {
     await connection.commit();
 
     res.status(201).json({
+      success: true,
       message: 'Booking created successfully',
       bookingCode,
       bookingId: result.insertId
@@ -85,7 +95,10 @@ export const createBooking = async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error('Create booking error:', error);
-    res.status(500).json({ error: 'Failed to create booking' });
+    res.status(500).json({ 
+      success: false,
+      error: error.message || 'Failed to create booking' 
+    });
   } finally {
     connection.release();
   }

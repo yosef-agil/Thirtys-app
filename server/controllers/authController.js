@@ -7,7 +7,10 @@ export const login = async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password required' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Username and password required' 
+      });
     }
 
     const [rows] = await db.execute(
@@ -16,23 +19,30 @@ export const login = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ 
+        success: false,
+        error: 'Invalid credentials' 
+      });
     }
 
     const admin = rows[0];
     const isValidPassword = await bcrypt.compare(password, admin.password);
 
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ 
+        success: false,
+        error: 'Invalid credentials' 
+      });
     }
 
     const token = jwt.sign(
       { id: admin.id, username: admin.username },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'your-secret-key', // Fallback jika env tidak ada
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
 
     res.json({
+      success: true,
       token,
       admin: {
         id: admin.id,
@@ -41,7 +51,10 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error' 
+    });
   }
 };
 
