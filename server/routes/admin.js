@@ -3,11 +3,12 @@ import {
   getDashboardStats,
   getMonthlyRevenue
 } from '../controllers/adminController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.get('/stats', authenticateToken, getDashboardStats);
-router.get('/revenue', authenticateToken, getMonthlyRevenue);
+// Tambahkan requireAdmin middleware
+router.get('/stats', authenticateToken, requireAdmin, getDashboardStats);
+router.get('/revenue', authenticateToken, requireAdmin, getMonthlyRevenue);
 
 export default router;

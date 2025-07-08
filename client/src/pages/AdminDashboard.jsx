@@ -18,7 +18,24 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadDashboardData();
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/admin/login');
+        return;
+      }
+      
+      try {
+        // Verify token masih valid
+        await api.get('/auth/verify');
+        loadDashboardData();
+      } catch (error) {
+        localStorage.removeItem('token');
+        navigate('/admin/login');
+      }
+    };
+    
+    checkAuth();
   }, []);
 
   const loadDashboardData = async () => {
