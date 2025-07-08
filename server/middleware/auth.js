@@ -17,9 +17,17 @@ export const authenticateToken = (req, res, next) => {
   });
 };
 
+// TAMBAHKAN MIDDLEWARE INI
 export const requireAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
+  // Pastikan user sudah ter-authenticate
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
   }
+  
+  // Periksa role admin
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
   next();
 };
