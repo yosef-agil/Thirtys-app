@@ -179,46 +179,37 @@ export default function BookingTable({ bookings, onUpdate }) {
 
       {/* Details Modal */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              Booking Details
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={closeDetails}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogTitle>
+            <DialogTitle>Booking Details</DialogTitle>
           </DialogHeader>
           
           {selectedBooking && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Customer Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Customer Information</CardTitle>
+                  <CardTitle className="text-base">Customer Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Name</p>
+                      <p className="text-xs font-medium text-gray-500">Name</p>
                       <p className="text-sm">{selectedBooking.customer_name}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Phone</p>
+                      <p className="text-xs font-medium text-gray-500">Phone</p>
                       <p className="text-sm">{selectedBooking.phone_number}</p>
                     </div>
                     {selectedBooking.faculty && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Faculty</p>
+                        <p className="text-xs font-medium text-gray-500">Faculty</p>
                         <p className="text-sm">{selectedBooking.faculty}</p>
                       </div>
                     )}
                     {selectedBooking.university && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500">University</p>
+                        <p className="text-xs font-medium text-gray-500">University</p>
                         <p className="text-sm">{selectedBooking.university}</p>
                       </div>
                     )}
@@ -229,33 +220,33 @@ export default function BookingTable({ bookings, onUpdate }) {
               {/* Booking Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Booking Information</CardTitle>
+                  <CardTitle className="text-base">Booking Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Booking Code</p>
+                      <p className="text-xs font-medium text-gray-500">Booking Code</p>
                       <p className="text-sm font-mono">{selectedBooking.booking_code}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Status</p>
+                      <p className="text-xs font-medium text-gray-500">Status</p>
                       <div className="mt-1">{getStatusBadge(selectedBooking.status)}</div>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Service</p>
+                      <p className="text-xs font-medium text-gray-500">Service</p>
                       <p className="text-sm">{selectedBooking.service_name}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Package</p>
+                      <p className="text-xs font-medium text-gray-500">Package</p>
                       <p className="text-sm">{selectedBooking.package_name}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Date</p>
+                      <p className="text-xs font-medium text-gray-500">Date</p>
                       <p className="text-sm">{format(new Date(selectedBooking.booking_date), 'dd MMM yyyy')}</p>
                     </div>
                     {selectedBooking.start_time && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Time</p>
+                        <p className="text-xs font-medium text-gray-500">Time</p>
                         <p className="text-sm">{selectedBooking.start_time} - {selectedBooking.end_time}</p>
                       </div>
                     )}
@@ -263,65 +254,79 @@ export default function BookingTable({ bookings, onUpdate }) {
                 </CardContent>
               </Card>
 
-              {/* Payment Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Payment Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Total Price</p>
-                      <p className="text-lg font-semibold">Rp {selectedBooking.total_price.toLocaleString('id-ID')}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Payment Type</p>
-                      <p className="text-sm capitalize">{selectedBooking.payment_type?.replace('_', ' ')}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Payment Proof */}
-                  {selectedBooking.payment_proof && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-2">Payment Proof</p>
-                      <div className="border rounded-lg p-4 bg-gray-50">
-                        <img
-                          src={`/uploads/${selectedBooking.payment_proof}`}
-                          alt="Payment Proof"
-                          className="max-w-full h-auto max-h-96 rounded"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'block';
-                          }}
-                        />
-                        <div className="hidden text-center text-gray-500 py-8">
-                          <p>Payment proof image not available</p>
-                          <p className="text-sm">File: {selectedBooking.payment_proof}</p>
-                        </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Payment Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Payment Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500">Total Price</p>
+                        <p className="text-lg font-semibold">Rp {selectedBooking.total_price.toLocaleString('id-ID')}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500">Payment Type</p>
+                        <p className="text-sm capitalize">{selectedBooking.payment_type?.replace('_', ' ')}</p>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Timestamps */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Timestamps</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium text-gray-500">Created</p>
-                      <p>{format(new Date(selectedBooking.created_at), 'dd MMM yyyy, HH:mm')}</p>
+                {/* Timestamps */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Timestamps</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500">Created</p>
+                        <p className="text-sm">{format(new Date(selectedBooking.created_at), 'dd MMM yyyy, HH:mm')}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500">Updated</p>
+                        <p className="text-sm">{format(new Date(selectedBooking.updated_at), 'dd MMM yyyy, HH:mm')}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-500">Updated</p>
-                      <p>{format(new Date(selectedBooking.updated_at), 'dd MMM yyyy, HH:mm')}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Payment Proof - Full Width */}
+              {selectedBooking.payment_proof && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Payment Proof</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border rounded-lg p-4 bg-gray-50">
+                      <img
+                        src={`${import.meta.env.VITE_API_URL || 'https://thirtys-code-production.up.railway.app'}/uploads/${selectedBooking.payment_proof}`}
+                        alt="Payment Proof"
+                        className="max-w-full h-auto max-h-96 rounded mx-auto block"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'block';
+                        }}
+                      />
+                      <div className="hidden text-center text-gray-500 py-8">
+                        <p>Payment proof image not available</p>
+                        <p className="text-sm">File: {selectedBooking.payment_proof}</p>
+                        <a 
+                          href={`${import.meta.env.VITE_API_URL || 'https://thirtys-code-production.up.railway.app'}/uploads/${selectedBooking.payment_proof}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline text-sm"
+                        >
+                          Try opening in new tab
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </DialogContent>

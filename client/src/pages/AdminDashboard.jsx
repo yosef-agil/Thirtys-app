@@ -23,7 +23,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuth = () => {
       const token = localStorage.getItem('token');
       const admin = localStorage.getItem('admin');
       
@@ -32,19 +32,8 @@ export default function AdminDashboard() {
         return;
       }
       
-      try {
-        // Optional: Verify token dengan backend
-        // await api.get('/auth/verify');
-        
-        // Jika token ada, langsung load dashboard
-        await loadDashboardData();
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        // Jika gagal, hapus token dan redirect
-        localStorage.removeItem('token');
-        localStorage.removeItem('admin');
-        navigate('/admin/login');
-      }
+      // Langsung load dashboard tanpa verifikasi ke server
+      loadDashboardData();
     };
     
     checkAuth();
