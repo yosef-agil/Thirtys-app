@@ -31,4 +31,21 @@ router.post('/', authenticateToken, requireAdmin, createService);
 router.put('/:id', authenticateToken, requireAdmin, updateService);
 router.delete('/:id', authenticateToken, requireAdmin, deleteService);
 
+router.get('/:serviceId/time-slots', async (req, res) => {
+  try {
+    const { serviceId } = req.params;
+    const { date } = req.query;
+    
+    const [slots] = await db.execute(
+      'SELECT * FROM time_slots WHERE service_id = ? AND date = ? AND is_booked = FALSE ORDER BY start_time',
+      [serviceId, date]
+    );
+    
+    res.json(slots);
+  } catch (error) {
+    console.error('Get time slots error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

@@ -303,7 +303,7 @@ export default function BookingTable({ bookings, onUpdate }) {
                   <CardContent>
                     <div className="border rounded-lg p-4 bg-gray-50">
                       <img
-                        src={`${import.meta.env.VITE_API_URL || 'https://thirtys-code-production.up.railway.app'}/uploads/${selectedBooking.payment_proof}`}
+                        src={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
                         alt="Payment Proof"
                         className="max-w-full h-auto max-h-96 rounded mx-auto block"
                         onError={(e) => {
@@ -313,15 +313,20 @@ export default function BookingTable({ bookings, onUpdate }) {
                       />
                       <div className="hidden text-center text-gray-500 py-8">
                         <p>Payment proof image not available</p>
-                        <p className="text-sm">File: {selectedBooking.payment_proof}</p>
-                        <a 
-                          href={`${import.meta.env.VITE_API_URL || 'https://thirtys-code-production.up.railway.app'}/uploads/${selectedBooking.payment_proof}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline text-sm"
-                        >
-                          Try opening in new tab
-                        </a>
+                        <p className="text-sm mb-2">File: {selectedBooking.payment_proof}</p>
+                        <div className="space-y-2">
+                          <a 
+                            href={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-blue-500 hover:underline text-sm"
+                          >
+                            Try direct link
+                          </a>
+                          <p className="text-xs text-gray-400">
+                            If image doesn't load, the file might not exist on the server
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
