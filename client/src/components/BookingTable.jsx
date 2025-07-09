@@ -27,7 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { Eye, Download, Copy, Check } from 'lucide-react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
-import PDFInvoice from '/PDFInvoice';
+import PDFInvoice from './PDFInvoice';
 import api from '../services/api';
 import { useToast } from '@/hooks/use-toast';
 
