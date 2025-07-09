@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Copy, Check } from 'lucide-react';
 import { bookingService } from '../services/bookingService';
 
 const bookingSchema = z.object({
@@ -45,8 +46,36 @@ export default function BookingPage() {
     discountPercentage: 0
   });
   const [loading, setLoading] = useState(false);
+  const [copiedAccount, setCopiedAccount] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate(); // TAMBAHKAN INI
+
+  // Bank accounts data
+  const bankAccounts = [
+    { bank: 'BCA', number: '580201024795533', name: 'Nadhita Crisya' },
+    { bank: 'BRI', number: '0132189968', name: 'Nadhita Crisya' },
+    { bank: 'JAGO', number: '102328996443', name: 'Yosef Agil' },
+  ];
+
+  const copyToClipboard = async (text, accountKey) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedAccount(accountKey);
+      toast({
+        title: 'Copied!',
+        description: `Account number ${text} copied to clipboard`,
+      });
+      
+      // Reset copied state after 2 seconds
+      setTimeout(() => setCopiedAccount(''), 2000);
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to copy to clipboard',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const {
     register,
@@ -401,6 +430,41 @@ export default function BookingPage() {
                   <p className="text-sm text-red-500">{errors.paymentProof.message}</p>
                 )}
               </div>
+
+              {/* Bank Account Information */}
+              {watchPaymentType && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="text-base text-blue-800">Bank Account Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {bankAccounts.map((account, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-white">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{account.bank}</p>
+                          <p className="text-xs text-gray-600">{account.number} - {account.name}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(account.number, `${account.bank}-${account.number}`)}
+                          className="ml-2"
+                        >
+                          {copiedAccount === `${account.bank}-${account.number}` ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                    <p className="text-xs text-blue-600 mt-2 italic">
+                      *Wajib mengirimkan bukti pembayaran ke WhatsApp admin setelah transfer
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Debug Panel - Hapus setelah testing */}
               {/* <div className="bg-blue-50 p-4 rounded-lg text-sm">

@@ -25,14 +25,64 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { Eye, X } from 'lucide-react';
+import { Eye, Download, Copy, Check } from 'lucide-react';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import PDFInvoice from '../components/PDFInvoice';
 import api from '../services/api';
 import { useToast } from '@/hooks/use-toast';
 
 export default function BookingTable({ bookings, onUpdate }) {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [copiedAccount, setCopiedAccount] = useState('');
   const { toast } = useToast();
+
+  // Bank accounts data
+//   const bankAccounts = [
+//     { bank: 'BCA', number: '8445203480', name: 'YOSEF' },
+//     { bank: 'BRI', number: '8445203480', name: 'YOSEF' },
+//     { bank: 'JAGO', number: '8445203480', name: 'YOSEF' },
+//   ];
+
+//   const copyToClipboard = async (text, accountKey) => {
+//     try {
+//       await navigator.clipboard.writeText(text);
+//       setCopiedAccount(accountKey);
+//       toast({
+//         title: 'Copied!',
+//         description: `Account number ${text} copied to clipboard`,
+//       });
+      
+//       // Reset copied state after 2 seconds
+//       setTimeout(() => setCopiedAccount(''), 2000);
+//     } catch (err) {
+//       toast({
+//         title: 'Error',
+//         description: 'Failed to copy to clipboard',
+//         variant: 'destructive',
+//       });
+//     }
+//   };
+
+  // Convert booking data to invoice format
+  const convertToInvoiceData = (booking) => {
+    if (!booking) return null;
+
+    return {
+      inv_id: booking.booking_code,
+      customer: booking.customer_name,
+      due_date: booking.booking_date,
+      discount: 0, // You can adjust this based on your needs
+      downpayment: booking.payment_type === 'down_payment' ? booking.total_price * 0.5 : 0,
+      note: `${booking.service_name} - ${booking.package_name}${booking.faculty ? ` | ${booking.faculty} - ${booking.university}` : ''}`,
+      items: [
+        {
+          description: `${booking.service_name} - ${booking.package_name}`,
+          price: booking.total_price.toString(),
+        }
+      ]
+    };
+  };
 
   const updateBookingStatus = async (bookingId, newStatus) => {
     try {
@@ -181,7 +231,28 @@ export default function BookingTable({ bookings, onUpdate }) {
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Booking Details</DialogTitle>
+            <div className="flex justify-between items-center">
+              <DialogTitle>Booking Details</DialogTitle>
+              
+              {/* PDF Download Button */}
+              {selectedBooking && (
+                <PDFDownloadLink
+                  document={<PDFInvoice invoice={convertToInvoiceData(selectedBooking)} />}
+                  fileName={`Invoice-${selectedBooking.booking_code}.pdf`}
+                >
+                  {({ blob, url, loading, error }) => (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      disabled={loading}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      {loading ? 'Generating...' : 'Download Invoice'}
+                    </Button>
+                  )}
+                </PDFDownloadLink>
+              )}
+            </div>
           </DialogHeader>
           
           {selectedBooking && (
@@ -271,6 +342,36 @@ export default function BookingTable({ bookings, onUpdate }) {
                         <p className="text-sm capitalize">{selectedBooking.payment_type?.replace('_', ' ')}</p>
                       </div>
                     </div>
+
+                    {/* Bank Account Information */}
+                    {/* <div className="mt-4">
+                      <p className="text-xs font-medium text-gray-500 mb-3">Bank Account Information:</p>
+                      <div className="space-y-2">
+                        {bankAccounts.map((account, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 border rounded-lg bg-gray-50">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{account.bank}</p>
+                              <p className="text-xs text-gray-600">{account.number} - {account.name}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(account.number, `${account.bank}-${account.number}`)}
+                              className="ml-2"
+                            >
+                              {copiedAccount === `${account.bank}-${account.number}` ? (
+                                <Check className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <Copy className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2 italic">
+                        *Wajib mengirimkan bukti pembayaran ke WhatsApp admin
+                      </p>
+                    </div> */}
                   </CardContent>
                 </Card>
 
