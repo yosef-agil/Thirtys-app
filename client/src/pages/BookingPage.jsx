@@ -304,7 +304,7 @@ export default function BookingPage() {
                       <SelectItem key={service.id} value={service.id.toString()}>
                         {service.name}
                         {service.discount_percentage > 0 && (
-                          <span className="text-green-600 ml-2">
+                          <span className="text-green-800 ml-2 p-1 px-2 bg-green-200 text-xs font-semibold rounded-xl">
                             ({service.discount_percentage}% OFF)
                           </span>
                         )}
@@ -389,7 +389,7 @@ export default function BookingPage() {
                         <SelectItem key={slot.id} value={slot.id.toString()}>
                           <div className="flex justify-between items-center w-full">
                             <span>{slot.start_time} - {slot.end_time}</span>
-                            <span className="text-sm text-gray-500 ml-4">
+                            <span className="text-green-800 ml-2 p-1 px-2 bg-green-200 text-xs font-semibold rounded-xl">
                               ({slot.available_slots}/{slot.max_capacity} available)
                             </span>
                           </div>
