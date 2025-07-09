@@ -71,6 +71,29 @@ export const createBooking = async (req, res) => {
       finalPaidAmount = paymentType === 'down_payment' ? finalFullPrice * 0.5 : finalFullPrice;
     }
 
+    // Check time slot availability before booking
+    if (timeSlotId) {
+      const [slotCheck] = await connection.execute(`
+        SELECT 
+          ts.max_capacity,
+          COALESCE(COUNT(tsb.id), 0) as current_bookings
+        FROM time_slots ts
+        LEFT JOIN time_slot_bookings tsb ON ts.id = tsb.time_slot_id
+        LEFT JOIN bookings b ON tsb.booking_id = b.id AND b.status != 'cancelled'
+        WHERE ts.id = ?
+        GROUP BY ts.id, ts.max_capacity
+      `, [timeSlotId]);
+
+      if (slotCheck.length === 0) {
+        throw new Error('Time slot not found');
+      }
+
+      const { max_capacity, current_bookings } = slotCheck[0];
+      if (current_bookings >= max_capacity) {
+        throw new Error('Time slot is fully booked');
+      }
+    }
+
     // Insert booking with FULL PRICE (not paid amount)
     const [result] = await connection.execute(`
       INSERT INTO bookings (
@@ -85,12 +108,35 @@ export const createBooking = async (req, res) => {
       paymentType, paymentProof
     ]);
 
-    // Update time slot if applicable
+    // Update time slot booking relationship
     if (timeSlotId) {
+      // Insert into junction table
       await connection.execute(
-        'UPDATE time_slots SET is_booked = TRUE WHERE id = ?',
-        [timeSlotId]
+        'INSERT INTO time_slot_bookings (time_slot_id, booking_id) VALUES (?, ?)',
+        [timeSlotId, result.insertId]
       );
+
+      // Check if slot is now full and update is_booked flag
+      const [slotStatus] = await connection.execute(`
+        SELECT 
+          ts.max_capacity,
+          COUNT(tsb.id) as current_bookings
+        FROM time_slots ts
+        LEFT JOIN time_slot_bookings tsb ON ts.id = tsb.time_slot_id
+        LEFT JOIN bookings b ON tsb.booking_id = b.id AND b.status != 'cancelled'
+        WHERE ts.id = ?
+        GROUP BY ts.id, ts.max_capacity
+      `, [timeSlotId]);
+
+      if (slotStatus.length > 0) {
+        const { max_capacity, current_bookings } = slotStatus[0];
+        const isFull = current_bookings >= max_capacity;
+        
+        await connection.execute(
+          'UPDATE time_slots SET is_booked = ? WHERE id = ?',
+          [isFull, timeSlotId]
+        );
+      }
     }
 
     await connection.commit();
@@ -226,12 +272,35 @@ export const deleteBooking = async (req, res) => {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
-    // Free up time slot if applicable
+    // Remove from time slot bookings junction table
     if (bookings[0].time_slot_id) {
       await connection.execute(
-        'UPDATE time_slots SET is_booked = FALSE WHERE id = ?',
-        [bookings[0].time_slot_id]
+        'DELETE FROM time_slot_bookings WHERE booking_id = ?',
+        [id]
       );
+
+      // Update time slot availability
+      const timeSlotId = bookings[0].time_slot_id;
+      const [slotStatus] = await connection.execute(`
+        SELECT 
+          ts.max_capacity,
+          COUNT(tsb.id) as current_bookings
+        FROM time_slots ts
+        LEFT JOIN time_slot_bookings tsb ON ts.id = tsb.time_slot_id
+        LEFT JOIN bookings b ON tsb.booking_id = b.id AND b.status != 'cancelled'
+        WHERE ts.id = ?
+        GROUP BY ts.id, ts.max_capacity
+      `, [timeSlotId]);
+
+      if (slotStatus.length > 0) {
+        const { max_capacity, current_bookings } = slotStatus[0];
+        const isFull = current_bookings >= max_capacity;
+        
+        await connection.execute(
+          'UPDATE time_slots SET is_booked = ? WHERE id = ?',
+          [isFull, timeSlotId]
+        );
+      }
     }
 
     // Delete booking

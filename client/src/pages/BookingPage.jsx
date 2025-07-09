@@ -355,10 +355,15 @@ export default function BookingPage() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select a time slot" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="animate-none">
                       {timeSlots.map(slot => (
                         <SelectItem key={slot.id} value={slot.id.toString()}>
-                          {slot.start_time} - {slot.end_time}
+                          <div className="flex justify-between items-center w-full">
+                            <span>{slot.start_time} - {slot.end_time}</span>
+                            <span className="text-sm text-gray-500 ml-4">
+                              ({slot.available_slots}/{slot.max_capacity} available)
+                            </span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>

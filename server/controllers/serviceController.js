@@ -96,7 +96,7 @@ export const deleteService = async (req, res) => {
   }
 };
 
-// Time Slots
+// Time Slots dengan Multi-Quota
 export const getTimeSlots = async (req, res) => {
   try {
     const { serviceId } = req.params;
@@ -106,10 +106,24 @@ export const getTimeSlots = async (req, res) => {
       return res.status(400).json({ error: 'Date parameter is required' });
     }
     
-    const [slots] = await db.execute(
-      'SELECT * FROM time_slots WHERE service_id = ? AND date = ? AND is_booked = FALSE ORDER BY start_time',
-      [serviceId, date]
-    );
+    const [slots] = await db.execute(`
+      SELECT 
+        ts.id,
+        ts.service_id,
+        ts.date,
+        ts.start_time,
+        ts.end_time,
+        ts.max_capacity,
+        COALESCE(COUNT(tsb.id), 0) as current_bookings,
+        (ts.max_capacity - COALESCE(COUNT(tsb.id), 0)) as available_slots
+      FROM time_slots ts
+      LEFT JOIN time_slot_bookings tsb ON ts.id = tsb.time_slot_id
+      LEFT JOIN bookings b ON tsb.booking_id = b.id AND b.status != 'cancelled'
+      WHERE ts.service_id = ? AND ts.date = ?
+      GROUP BY ts.id, ts.service_id, ts.date, ts.start_time, ts.end_time, ts.max_capacity
+      HAVING available_slots > 0
+      ORDER BY ts.start_time
+    `, [serviceId, date]);
     
     res.json(slots);
   } catch (error) {
