@@ -8,6 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -21,48 +22,38 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { Eye, Download, Copy, Check } from 'lucide-react';
+import { Eye, Download } from 'lucide-react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import PDFInvoice from './PDFInvoice';
 import api from '../services/api';
 import { useToast } from '@/hooks/use-toast';
 
-export default function BookingTable({ bookings, onUpdate }) {
+// Utility function untuk format harga
+const formatPrice = (price) => {
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  return new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(numPrice);
+};
+
+export default function BookingTable({ 
+  bookings, 
+  onUpdate, 
+  selectedBookings = [], 
+  onSelectBooking = () => {}, 
+  onSelectAll = () => {} 
+}) {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [copiedAccount, setCopiedAccount] = useState('');
   const { toast } = useToast();
 
-  // Bank accounts data
-//   const bankAccounts = [
-//     { bank: 'BCA', number: '8445203480', name: 'YOSEF' },
-//     { bank: 'BRI', number: '8445203480', name: 'YOSEF' },
-//     { bank: 'JAGO', number: '8445203480', name: 'YOSEF' },
-//   ];
-
-//   const copyToClipboard = async (text, accountKey) => {
-//     try {
-//       await navigator.clipboard.writeText(text);
-//       setCopiedAccount(accountKey);
-//       toast({
-//         title: 'Copied!',
-//         description: `Account number ${text} copied to clipboard`,
-//       });
-      
-//       // Reset copied state after 2 seconds
-//       setTimeout(() => setCopiedAccount(''), 2000);
-//     } catch (err) {
-//       toast({
-//         title: 'Error',
-//         description: 'Failed to copy to clipboard',
-//         variant: 'destructive',
-//       });
-//     }
-//   };
+  // Check if all bookings are selected
+  const isAllSelected = bookings.length > 0 && selectedBookings.length === bookings.length;
+  const isIndeterminate = selectedBookings.length > 0 && selectedBookings.length < bookings.length;
 
   // Convert booking data to invoice format
   const convertToInvoiceData = (booking) => {
@@ -72,7 +63,7 @@ export default function BookingTable({ bookings, onUpdate }) {
       inv_id: booking.booking_code,
       customer: booking.customer_name,
       due_date: booking.booking_date,
-      discount: 0, // You can adjust this based on your needs
+      discount: 0,
       downpayment: booking.payment_type === 'down_payment' ? booking.total_price * 0.5 : 0,
       note: `${booking.service_name} - ${booking.package_name}${booking.faculty ? ` | ${booking.faculty} - ${booking.university}` : ''}`,
       items: [
@@ -140,17 +131,20 @@ export default function BookingTable({ bookings, onUpdate }) {
     setDetailsOpen(true);
   };
 
-  const closeDetails = () => {
-    setSelectedBooking(null);
-    setDetailsOpen(false);
-  };
-
   return (
     <>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={isAllSelected}
+                  onCheckedChange={onSelectAll}
+                  aria-label="Select all"
+                  className="translate-y-[2px]"
+                />
+              </TableHead>
               <TableHead>Booking Code</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Service</TableHead>
@@ -163,6 +157,14 @@ export default function BookingTable({ bookings, onUpdate }) {
           <TableBody>
             {bookings.map((booking) => (
               <TableRow key={booking.id}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedBookings.includes(booking.id)}
+                    onCheckedChange={(checked) => onSelectBooking(booking.id, checked)}
+                    aria-label={`Select booking ${booking.booking_code}`}
+                    className="translate-y-[2px]"
+                  />
+                </TableCell>
                 <TableCell className="font-medium">{booking.booking_code}</TableCell>
                 <TableCell>
                   <div>
@@ -185,7 +187,7 @@ export default function BookingTable({ bookings, onUpdate }) {
                   )}
                 </TableCell>
                 <TableCell>
-                  Rp {booking.total_price.toLocaleString('id-ID')}
+                  Rp {formatPrice(booking.total_price)}
                 </TableCell>
                 <TableCell>{getStatusBadge(booking.status)}</TableCell>
                 <TableCell>
@@ -335,43 +337,25 @@ export default function BookingTable({ bookings, onUpdate }) {
                     <div className="space-y-2">
                       <div>
                         <p className="text-xs font-medium text-gray-500">Total Price</p>
-                        <p className="text-lg font-semibold">Rp {selectedBooking.total_price.toLocaleString('id-ID')}</p>
+                        <p className="text-lg font-semibold">Rp {formatPrice(selectedBooking.total_price)}</p>
                       </div>
                       <div>
                         <p className="text-xs font-medium text-gray-500">Payment Type</p>
                         <p className="text-sm capitalize">{selectedBooking.payment_type?.replace('_', ' ')}</p>
                       </div>
+                      {selectedBooking.payment_method && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-500">Payment Method</p>
+                          <p className="text-sm capitalize">{selectedBooking.payment_method}</p>
+                        </div>
+                      )}
+                      {selectedBooking.selected_bank && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-500">Bank</p>
+                          <p className="text-sm">{selectedBooking.selected_bank}</p>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Bank Account Information */}
-                    {/* <div className="mt-4">
-                      <p className="text-xs font-medium text-gray-500 mb-3">Bank Account Information:</p>
-                      <div className="space-y-2">
-                        {bankAccounts.map((account, index) => (
-                          <div key={index} className="flex items-center justify-between p-2 border rounded-lg bg-gray-50">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">{account.bank}</p>
-                              <p className="text-xs text-gray-600">{account.number} - {account.name}</p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(account.number, `${account.bank}-${account.number}`)}
-                              className="ml-2"
-                            >
-                              {copiedAccount === `${account.bank}-${account.number}` ? (
-                                <Check className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <Copy className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2 italic">
-                        *Wajib mengirimkan bukti pembayaran ke WhatsApp admin
-                      </p>
-                    </div> */}
                   </CardContent>
                 </Card>
 
@@ -403,66 +387,18 @@ export default function BookingTable({ bookings, onUpdate }) {
                   </CardHeader>
                   <CardContent>
                     <div className="border rounded-lg p-4 bg-gray-50">
-                      <div className="space-y-4">
-                        {/* Try multiple URL patterns */}
-                        <div className="grid grid-cols-1 gap-4">
-                          <div>
-                            <p className="text-sm font-medium mb-2">Direct URL:</p>
-                            <img
-                              src={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
-                              alt="Payment Proof"
-                              className="max-w-full h-auto max-h-96 rounded mx-auto block border"
-                              onLoad={() => console.log('Image loaded successfully')}
-                              onError={(e) => {
-                                console.log('Direct URL failed, trying alternative...');
-                                e.target.style.display = 'none';
-                                e.target.nextElementSibling.style.display = 'block';
-                              }}
-                            />
-                            <div className="hidden">
-                              <p className="text-sm font-medium mb-2">Alternative URL:</p>
-                              <img
-                                src={`https://thirtys-code-production.up.railway.app/${selectedBooking.payment_proof}`}
-                                alt="Payment Proof Alternative"
-                                className="max-w-full h-auto max-h-96 rounded mx-auto block border"
-                                onLoad={() => console.log('Alternative image loaded successfully')}
-                                onError={(e) => {
-                                  console.log('Alternative URL also failed');
-                                  e.target.style.display = 'none';
-                                  e.target.parentElement.nextElementSibling.style.display = 'block';
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="hidden text-center text-gray-500 py-8">
-                          <p className="mb-2">Payment proof image not available</p>
-                          <p className="text-sm mb-4">File: {selectedBooking.payment_proof}</p>
-                          <div className="space-y-2">
-                            <div className="flex flex-col gap-2">
-                              <a 
-                                href={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-500 hover:underline text-sm"
-                              >
-                                Try direct link (with /uploads/)
-                              </a>
-                              <a 
-                                href={`https://thirtys-code-production.up.railway.app/${selectedBooking.payment_proof}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-500 hover:underline text-sm"
-                              >
-                                Try alternative link (without /uploads/)
-                              </a>
-                            </div>
-                            <p className="text-xs text-gray-400 mt-4">
-                              If both links don't work, the file might not exist on the server or the static file serving is not configured properly.
-                            </p>
-                          </div>
-                        </div>
+                      <img
+                        src={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
+                        alt="Payment Proof"
+                        className="max-w-full h-auto max-h-96 rounded mx-auto block border"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'block';
+                        }}
+                      />
+                      <div className="hidden text-center text-gray-500 py-8">
+                        <p className="mb-2">Payment proof image not available</p>
+                        <p className="text-sm mb-4">File: {selectedBooking.payment_proof}</p>
                       </div>
                     </div>
                   </CardContent>

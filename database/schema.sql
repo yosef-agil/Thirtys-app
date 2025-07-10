@@ -88,28 +88,28 @@ INSERT INTO services (name, base_price, has_time_slots, description) VALUES
 
 -- Insert service packages
 INSERT INTO service_packages (service_id, package_name, price, description) VALUES
--- Self Photo packages
+
 (1, 'Basic (30 minutes)', 50000, '10 edited photos'),
 (1, 'Premium (1 hour)', 100000, '20 edited photos + all raw files'),
--- Graduation packages
+
 (2, 'Personal Package', 300000, 'Individual graduation photo session'),
 (2, 'Couple Package', 400000, 'Photo session for 2 people'),
 (2, 'Group Package (3-5)', 600000, 'Photo session for 3-5 people'),
 (2, 'Large Group (6-10)', 900000, 'Photo session for 6-10 people'),
--- Wedding Photography packages
+
 (3, 'Basic Package', 5000000, 'Half day coverage + 100 edited photos'),
 (3, 'Standard Package', 8000000, 'Full day coverage + 200 edited photos'),
 (3, 'Premium Package', 12000000, 'Full day + prewedding + 300 edited photos'),
--- Wedding Videography packages
+
 (4, 'Basic Package', 7000000, 'Highlight video + ceremony coverage'),
 (4, 'Premium Package', 10000000, 'Full documentation + cinematic video'),
--- Prewedding Photography packages
+
 (5, 'Basic Package', 3000000, '1 location + 50 edited photos'),
 (5, 'Premium Package', 5000000, '2 locations + 100 edited photos'),
--- Prewedding Videography packages
+
 (6, 'Basic Package', 4000000, '3-5 minutes cinematic video'),
 (6, 'Premium Package', 6000000, '5-8 minutes cinematic video + behind the scenes'),
--- Photo Product packages
+
 (7, 'Basic Package', 100000, '10 product photos'),
 (7, 'Standard Package', 250000, '25 product photos + lifestyle shots'),
 (7, 'Premium Package', 500000, '50 product photos + video content');
@@ -117,33 +117,55 @@ INSERT INTO service_packages (service_id, package_name, price, description) VALU
 -- Generate time slots for Self Photo and Graduation Photography
 -- For the next 30 days
 DELIMITER //
-CREATE PROCEDURE GenerateTimeSlots()
-BEGIN
-    DECLARE date_counter DATE DEFAULT CURDATE();
-    DECLARE end_date DATE DEFAULT DATE_ADD(CURDATE(), INTERVAL 30 DAY);
-    
-    WHILE date_counter <= end_date DO
-        -- Self Photo slots (1 hour each)
-        INSERT INTO time_slots (service_id, date, start_time, end_time) VALUES
-        (1, date_counter, '09:00:00', '10:00:00'),
-        (1, date_counter, '10:00:00', '11:00:00'),
-        (1, date_counter, '11:00:00', '12:00:00'),
-        (1, date_counter, '13:00:00', '14:00:00'),
-        (1, date_counter, '14:00:00', '15:00:00'),
-        (1, date_counter, '15:00:00', '16:00:00'),
-        (1, date_counter, '16:00:00', '17:00:00');
+CREATE OR REPLACE PROCEDURE GenerateTimeSlots()  
+BEGIN  
+    DECLARE date_counter DATE DEFAULT CURDATE();  
+    DECLARE end_date DATE DEFAULT DATE_ADD(CURDATE(), INTERVAL 30 DAY);  
+
+    WHILE date_counter <= end_date DO  
+        -- Service 1
+        INSERT INTO time_slots (service_id, date, start_time, end_time) VALUES  
+        (1, date_counter, '09:00:00', '10:00:00'),  
+        (1, date_counter, '10:00:00', '11:00:00'),  
+        (1, date_counter, '11:00:00', '12:00:00'),  
+        (1, date_counter, '13:00:00', '14:00:00'),  
+        (1, date_counter, '14:00:00', '15:00:00'),  
+        (1, date_counter, '15:00:00', '16:00:00'),  
+        (1, date_counter, '16:00:00', '17:00:00');  
         
-        -- Graduation Photography slots (2 hours each)
-        INSERT INTO time_slots (service_id, date, start_time, end_time) VALUES
-        (2, date_counter, '09:00:00', '11:00:00'),
-        (2, date_counter, '11:00:00', '13:00:00'),
-        (2, date_counter, '14:00:00', '16:00:00'),
-        (2, date_counter, '16:00:00', '18:00:00');
+        -- Service 2
+        INSERT INTO time_slots (service_id, date, start_time, end_time) VALUES  
+        (2, date_counter, '09:00:00', '11:00:00'),  
+        (2, date_counter, '11:00:00', '13:00:00'),  
+        (2, date_counter, '14:00:00', '16:00:00'),  
+        (2, date_counter, '16:00:00', '18:00:00');  
         
-        SET date_counter = DATE_ADD(date_counter, INTERVAL 1 DAY);
-    END WHILE;
-END//
+        SET date_counter = DATE_ADD(date_counter, INTERVAL 1 DAY);  
+    END WHILE;  
+END //
 DELIMITER ;
 
 CALL GenerateTimeSlots();
 DROP PROCEDURE GenerateTimeSlots;
+
+INSERT INTO admins (username, password) VALUES 
+('admin', '$2a$10$5vJn0r6W6fHmcMxvVYeGXuXsHYH5DxDmxHTpH9ZzBBmz.FtYCCLS6');
+
+-- Tambah kolom max_capacity ke time_slots
+ALTER TABLE time_slots 
+ADD COLUMN max_capacity INT DEFAULT 1 AFTER end_time;
+
+-- Buat tabel junction
+CREATE TABLE time_slot_bookings (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  time_slot_id INT NOT NULL,
+  booking_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (time_slot_id) REFERENCES time_slots(id) ON DELETE CASCADE,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_booking_slot (time_slot_id, booking_id)
+);
+
+-- Set capacity untuk existing slots
+UPDATE time_slots SET max_capacity = 3 WHERE service_id = 1; -- Self Photo
+UPDATE time_slots SET max_capacity = 2 WHERE service_id = 2; -- Graduation

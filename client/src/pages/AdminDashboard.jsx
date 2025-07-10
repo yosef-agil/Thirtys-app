@@ -2,11 +2,21 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut } from 'lucide-react';
+import { LogOut, Search, Trash2, CheckCircle } from 'lucide-react';
 import BookingTable from '../components/BookingTable';
 import ServiceManager from '../components/ServiceManager';
 import api from '../services/api';
+
+// Utility function untuk format harga
+const formatPrice = (price) => {
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  return new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(numPrice);
+};
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState([]);
@@ -19,7 +29,21 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBookings, setSelectedBookings] = useState([]);
   const { toast } = useToast();
+
+  // Filtered bookings based on search
+  const filteredBookings = bookings.filter(booking => {
+    const query = searchQuery.toLowerCase();
+    return (
+      booking.booking_code.toLowerCase().includes(query) ||
+      booking.customer_name.toLowerCase().includes(query) ||
+      booking.phone_number.includes(query) ||
+      booking.service_name?.toLowerCase().includes(query) ||
+      booking.package_name?.toLowerCase().includes(query)
+    );
+  });
 
   useEffect(() => {
     const checkAuthAndLoadData = async () => {
@@ -32,7 +56,6 @@ export default function AdminDashboard() {
         
         if (!token || !admin) {
           console.log('No token or admin found, redirecting to login');
-          // Use window.location for more reliable redirect
           window.location.href = '/admin/login';
           return;
         }
@@ -46,14 +69,13 @@ export default function AdminDashboard() {
       } catch (error) {
         console.error('Auth check failed:', error);
         
-        // If API call fails, check if it's auth related
         if (error.response?.status === 401 || error.response?.status === 403) {
           localStorage.removeItem('token');
           localStorage.removeItem('admin');
           window.location.href = '/admin/login';
         } else {
           setError('Failed to load dashboard data');
-          setIsAuthenticated(true); // Keep user logged in for other errors
+          setIsAuthenticated(true);
         }
       } finally {
         setLoading(false);
@@ -77,7 +99,6 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
       
-      // If auth error during data loading, redirect
       if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem('token');
         localStorage.removeItem('admin');
@@ -85,7 +106,6 @@ export default function AdminDashboard() {
         return;
       }
       
-      // For other errors, show error but keep user logged in
       setError('Failed to load dashboard data');
       toast({
         title: 'Error',
@@ -99,6 +119,72 @@ export default function AdminDashboard() {
     localStorage.removeItem('token');
     localStorage.removeItem('admin');
     window.location.href = '/admin/login';
+  };
+
+  // Bulk action handlers
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedBookings(filteredBookings.map(b => b.id));
+    } else {
+      setSelectedBookings([]);
+    }
+  };
+
+  const handleSelectBooking = (bookingId, checked) => {
+    if (checked) {
+      setSelectedBookings([...selectedBookings, bookingId]);
+    } else {
+      setSelectedBookings(selectedBookings.filter(id => id !== bookingId));
+    }
+  };
+
+  const handleBulkAction = async (action) => {
+    if (selectedBookings.length === 0) {
+      toast({
+        title: 'No bookings selected',
+        description: 'Please select at least one booking',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      if (action === 'confirm') {
+        // Bulk confirm
+        await Promise.all(
+          selectedBookings.map(id => 
+            api.patch(`/bookings/${id}/status`, { status: 'confirmed' })
+          )
+        );
+        toast({
+          title: 'Success',
+          description: `${selectedBookings.length} bookings confirmed`,
+        });
+      } else if (action === 'delete') {
+        // Bulk delete
+        if (!confirm(`Are you sure you want to delete ${selectedBookings.length} bookings?`)) {
+          return;
+        }
+        await Promise.all(
+          selectedBookings.map(id => api.delete(`/bookings/${id}`))
+        );
+        toast({
+          title: 'Success',
+          description: `${selectedBookings.length} bookings deleted`,
+        });
+      }
+      
+      await loadDashboardData();
+      setSelectedBookings([]);
+      
+    } catch (error) {
+      console.error('Bulk action error:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to ${action} bookings`,
+        variant: 'destructive',
+      });
+    }
   };
 
   // Show loading while checking auth
@@ -190,7 +276,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">
-                Rp {stats.monthlyRevenue?.toLocaleString('id-ID') || 0}
+                Rp {formatPrice(stats.monthlyRevenue || 0)}
               </p>
               <p className="text-sm text-gray-500">This month</p>
             </CardContent>
@@ -207,10 +293,52 @@ export default function AdminDashboard() {
           <TabsContent value="bookings">
             <Card>
               <CardHeader>
-                <CardTitle>Recent Bookings</CardTitle>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <CardTitle>Recent Bookings</CardTitle>
+                  
+                  {/* Search Bar */}
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search bookings..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+                
+                {/* Quick Actions */}
+                {selectedBookings.length > 0 && (
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkAction('confirm')}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Confirm ({selectedBookings.length})
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => handleBulkAction('delete')}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete ({selectedBookings.length})
+                    </Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
-                <BookingTable bookings={bookings} onUpdate={loadDashboardData} />
+                <BookingTable 
+                  bookings={filteredBookings} 
+                  onUpdate={loadDashboardData}
+                  selectedBookings={selectedBookings}
+                  onSelectBooking={handleSelectBooking}
+                  onSelectAll={handleSelectAll}
+                />
               </CardContent>
             </Card>
           </TabsContent>

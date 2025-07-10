@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // HANYA TAMBAHKAN INI
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -20,18 +20,40 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Copy, Check } from 'lucide-react';
 import { bookingService } from '../services/bookingService';
 
-const bookingSchema = z.object({
-  customerName: z.string().min(2, 'Name must be at least 2 characters'),
-  phoneNumber: z.string().min(10, 'Valid phone number required'),
-  serviceId: z.string().min(1, 'Please select a service'),
-  packageId: z.string().min(1, 'Please select a package'),
-  bookingDate: z.date(),
-  timeSlotId: z.string().optional(),
-  faculty: z.string().optional(),
-  university: z.string().optional(),
-  paymentType: z.enum(['down_payment', 'full_payment']),
-  paymentProof: z.any(),
-});
+// Utility function untuk format harga
+const formatPrice = (price) => {
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  return new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(numPrice);
+};
+
+// Dynamic schema based on service
+const createBookingSchema = (isGraduationPhoto) => {
+  const baseSchema = {
+    customerName: z.string().min(2, 'Name must be at least 2 characters'),
+    phoneNumber: z.string().min(10, 'Valid phone number required'),
+    serviceId: z.string().min(1, 'Please select a service'),
+    packageId: z.string().min(1, 'Please select a package'),
+    bookingDate: z.date(),
+    timeSlotId: z.string().optional(),
+    paymentType: z.enum(['down_payment', 'full_payment']),
+    paymentMethod: z.enum(['qris', 'transfer', 'cash']),
+    selectedBank: z.string().optional(),
+    paymentProof: z.any().optional(),
+  };
+
+  if (isGraduationPhoto) {
+    baseSchema.faculty = z.string().min(1, 'Faculty is required for graduation photography');
+    baseSchema.university = z.string().min(1, 'University is required for graduation photography');
+  } else {
+    baseSchema.faculty = z.string().optional();
+    baseSchema.university = z.string().optional();
+  }
+
+  return z.object(baseSchema);
+};
 
 export default function BookingPage() {
   const [services, setServices] = useState([]);
@@ -48,7 +70,7 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState('');
   const { toast } = useToast();
-  const navigate = useNavigate(); // TAMBAHKAN INI
+  const navigate = useNavigate();
 
   // Bank accounts data
   const bankAccounts = [
@@ -66,7 +88,6 @@ export default function BookingPage() {
         description: `Account number ${text} copied to clipboard`,
       });
       
-      // Reset copied state after 2 seconds
       setTimeout(() => setCopiedAccount(''), 2000);
     } catch (err) {
       toast({
@@ -77,38 +98,46 @@ export default function BookingPage() {
     }
   };
 
+  const isGraduationPhotography = selectedService?.name === 'Graduation Photography';
+  const isSelfPhoto = selectedService?.name === 'Self Photo';
+
   const {
     register,
     handleSubmit,
     watch,
     setValue,
     formState: { errors },
+    reset,
   } = useForm({
-    resolver: zodResolver(bookingSchema),
+    resolver: zodResolver(createBookingSchema(isGraduationPhotography)),
   });
 
   const watchService = watch('serviceId');
   const watchPackage = watch('packageId');
   const watchDate = watch('bookingDate');
   const watchPaymentType = watch('paymentType');
+  const watchPaymentMethod = watch('paymentMethod');
+  const watchSelectedBank = watch('selectedBank');
 
   useEffect(() => {
     loadServices();
   }, []);
 
+  // Auto-set payment type for Self Photo
+  useEffect(() => {
+    if (isSelfPhoto) {
+      setValue('paymentType', 'full_payment');
+    }
+  }, [isSelfPhoto, setValue]);
+
   useEffect(() => {
     if (watchService) {
-      console.log('Service changed to:', watchService); // Debug log
       const service = services.find(s => s.id.toString() === watchService);
-      console.log('Found service:', service); // Debug log
-      
       setSelectedService(service);
       
       if (service?.packages) {
-        console.log('Setting packages:', service.packages); // Debug log
         setPackages(service.packages);
       } else {
-        // Fallback: load packages separately
         loadPackagesForService(watchService);
       }
     }
@@ -117,7 +146,6 @@ export default function BookingPage() {
   const loadPackagesForService = async (serviceId) => {
     try {
       const packages = await bookingService.getPackagesByService(serviceId);
-      console.log('Loaded packages for service:', packages); // Debug log
       setPackages(packages);
     } catch (error) {
       console.error('Failed to load packages for service:', error);
@@ -133,26 +161,21 @@ export default function BookingPage() {
 
   useEffect(() => {
     if (watchPackage && watchPaymentType) {
-      console.log('Calculating price for package:', watchPackage, 'payment type:', watchPaymentType); // Debug log
       const pkg = packages.find(p => p.id.toString() === watchPackage);
-      console.log('Found package:', pkg); // Debug log
       
       if (pkg) {
         let originalPrice = pkg.price;
-        console.log('Original price:', originalPrice); // Debug log
         
         // Apply discount if any
         let discountedPrice = originalPrice;
         if (selectedService?.discount_percentage) {
           discountedPrice = originalPrice * (1 - selectedService.discount_percentage / 100);
-          console.log('Price after discount:', discountedPrice); // Debug log
         }
         
         // Calculate payment amount based on type
         let paymentAmount = discountedPrice;
         if (watchPaymentType === 'down_payment') {
           paymentAmount = discountedPrice * 0.5;
-          console.log('Down payment amount:', paymentAmount); // Debug log
         }
         
         setTotalPrice({
@@ -162,7 +185,6 @@ export default function BookingPage() {
           paymentType: watchPaymentType,
           discountPercentage: selectedService?.discount_percentage || 0
         });
-        console.log('Final price object:', { originalPrice, discountedPrice, paymentAmount }); // Debug log
       }
     }
   }, [watchPackage, watchPaymentType, packages, selectedService]);
@@ -170,9 +192,7 @@ export default function BookingPage() {
   const loadServices = async () => {
     try {
       const data = await bookingService.getServices();
-      console.log('Loaded services:', data); // Debug log
       
-      // Pastikan services memiliki packages
       const servicesWithPackages = await Promise.all(
         data.map(async (service) => {
           try {
@@ -185,7 +205,6 @@ export default function BookingPage() {
         })
       );
       
-      console.log('Services with packages:', servicesWithPackages); // Debug log
       setServices(servicesWithPackages);
     } catch (error) {
       console.error('Failed to load services:', error);
@@ -207,55 +226,54 @@ export default function BookingPage() {
   };
 
   const onSubmit = async (data) => {
-  setLoading(true);
-  
-  try {
-    const formData = new FormData();
+    setLoading(true);
     
-    // Add all fields to FormData
-    formData.append('customerName', data.customerName);
-    formData.append('phoneNumber', data.phoneNumber);
-    formData.append('serviceId', data.serviceId);
-    formData.append('packageId', data.packageId);
-    formData.append('bookingDate', format(data.bookingDate, 'yyyy-MM-dd'));
-    formData.append('paymentType', data.paymentType);
-    
-    // Optional fields
-    if (data.timeSlotId) formData.append('timeSlotId', data.timeSlotId);
-    if (data.faculty) formData.append('faculty', data.faculty);
-    if (data.university) formData.append('university', data.university);
-    
-    // File upload
-    if (data.paymentProof && data.paymentProof[0]) {
-      formData.append('paymentProof', data.paymentProof[0]);
-    }
-
-    const response = await bookingService.createBooking(formData);
-    
-    if (response.success) {
-      toast({
-        title: 'Booking Successful!',
-        description: `Your booking code is ${response.bookingCode}. We will contact you via WhatsApp soon.`,
-      });
+    try {
+      const formData = new FormData();
       
-      // Reset form or redirect
-      setTimeout(() => {
-        navigate('/');
-      }, 3000);
-    }
-    } catch (error) {
-        console.error('Booking error:', error);
+      // Add all fields to FormData
+      formData.append('customerName', data.customerName);
+      formData.append('phoneNumber', data.phoneNumber);
+      formData.append('serviceId', data.serviceId);
+      formData.append('packageId', data.packageId);
+      formData.append('bookingDate', format(data.bookingDate, 'yyyy-MM-dd'));
+      formData.append('paymentType', data.paymentType);
+      formData.append('paymentMethod', data.paymentMethod);
+      
+      // Optional fields
+      if (data.timeSlotId) formData.append('timeSlotId', data.timeSlotId);
+      if (data.faculty) formData.append('faculty', data.faculty);
+      if (data.university) formData.append('university', data.university);
+      if (data.selectedBank) formData.append('selectedBank', data.selectedBank);
+      
+      // File upload - only for transfer payments
+      if (data.paymentMethod === 'transfer' && data.paymentProof && data.paymentProof[0]) {
+        formData.append('paymentProof', data.paymentProof[0]);
+      }
+
+      const response = await bookingService.createBooking(formData);
+      
+      if (response.success) {
         toast({
+          title: 'Booking Successful!',
+          description: `Your booking code is ${response.bookingCode}. We will contact you via WhatsApp soon.`,
+        });
+        
+        setTimeout(() => {
+          navigate('/');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast({
         title: 'Error',
         description: error.message || 'Failed to create booking',
         variant: 'destructive',
-        });
+      });
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-    };
-
-  const isGraduationPhotography = selectedService?.name === 'Graduation Photography';
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -328,7 +346,7 @@ export default function BookingPage() {
                     <SelectContent>
                       {packages.map(pkg => (
                         <SelectItem key={pkg.id} value={pkg.id.toString()}>
-                          {pkg.package_name} - Rp {pkg.price.toLocaleString('id-ID')}
+                          {pkg.package_name} - Rp {formatPrice(pkg.price)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -343,20 +361,26 @@ export default function BookingPage() {
               {isGraduationPhotography && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="faculty">Faculty</Label>
+                    <Label htmlFor="faculty">Faculty *</Label>
                     <Input
                       id="faculty"
                       {...register('faculty')}
                       placeholder="Enter your faculty"
                     />
+                    {errors.faculty && (
+                      <p className="text-sm text-red-500">{errors.faculty.message}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="university">University</Label>
+                    <Label htmlFor="university">University *</Label>
                     <Input
                       id="university"
                       {...register('university')}
                       placeholder="Enter your university"
                     />
+                    {errors.university && (
+                      <p className="text-sm text-red-500">{errors.university.message}</p>
+                    )}
                   </div>
                 </>
               )}
@@ -400,39 +424,52 @@ export default function BookingPage() {
                 </div>
               )}
 
-              {/* Payment Type */}
+              {/* Payment Type - Conditional for Self Photo */}
+              {!isSelfPhoto ? (
+                <div className="space-y-2">
+                  <Label>Payment Type</Label>
+                  <Select onValueChange={(value) => setValue('paymentType', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="down_payment">Down Payment (50%)</SelectItem>
+                      <SelectItem value="full_payment">Full Payment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.paymentType && (
+                    <p className="text-sm text-red-500">{errors.paymentType.message}</p>
+                  )}
+                </div>
+              ) : (
+                <input type="hidden" {...register('paymentType')} value="full_payment" />
+              )}
+
+              {/* Payment Method Selection */}
               <div className="space-y-2">
-                <Label>Payment Type</Label>
-                <Select onValueChange={(value) => setValue('paymentType', value)}>
+                <Label>Payment Method</Label>
+                <Select onValueChange={(value) => setValue('paymentMethod', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select payment type" />
+                    <SelectValue placeholder="Select payment method" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="down_payment">Down Payment (50%)</SelectItem>
-                    <SelectItem value="full_payment">Full Payment</SelectItem>
+                    <SelectItem value="qris" disabled>
+                      <span className="flex items-center">
+                        QRIS
+                        <span className="ml-2 text-xs text-gray-500">(Coming Soon)</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="transfer">Transfer Bank</SelectItem>
+                    <SelectItem value="cash">Cash</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.paymentType && (
-                  <p className="text-sm text-red-500">{errors.paymentType.message}</p>
+                {errors.paymentMethod && (
+                  <p className="text-sm text-red-500">{errors.paymentMethod.message}</p>
                 )}
               </div>
 
-              {/* Payment Proof */}
-              <div className="space-y-2">
-                <Label htmlFor="paymentProof">Payment Proof</Label>
-                <Input
-                  id="paymentProof"
-                  type="file"
-                  {...register('paymentProof')}
-                  accept="image/*"
-                />
-                {errors.paymentProof && (
-                  <p className="text-sm text-red-500">{errors.paymentProof.message}</p>
-                )}
-              </div>
-
-              {/* Bank Account Information */}
-              {watchPaymentType && (
+              {/* Bank Selection - Show only if transfer selected */}
+              {watchPaymentMethod === 'transfer' && watchPaymentType && (
                 <Card className="bg-blue-50 border-blue-200">
                   <CardHeader>
                     <CardTitle className="text-base text-blue-800">Bank Account Information</CardTitle>
@@ -466,18 +503,71 @@ export default function BookingPage() {
                 </Card>
               )}
 
-              {/* Debug Panel - Hapus setelah testing */}
-              {/* <div className="bg-blue-50 p-4 rounded-lg text-sm">
-                <p><strong>Debug Info:</strong></p>
-                <p>Services loaded: {services.length}</p>
-                <p>Selected service ID: {watchService || 'None'}</p>
-                <p>Selected service: {selectedService?.name || 'None'}</p>
-                <p>Packages available: {packages.length}</p>
-                <p>Selected package ID: {watchPackage || 'None'}</p>
-                <p>Payment type: {watchPaymentType || 'None'}</p>
-                <p>Total price object: {JSON.stringify(totalPrice)}</p>
-                <p>Form errors: {Object.keys(errors).length > 0 ? Object.keys(errors).join(', ') : 'None'}</p>
-              </div> */}
+              {/* Show selected bank info */}
+              {watchPaymentMethod === 'transfer' && watchSelectedBank && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="text-base text-blue-800">Bank Account Information</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const selectedAccount = bankAccounts.find(acc => acc.bank === watchSelectedBank);
+                      return selectedAccount ? (
+                        <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{selectedAccount.bank}</p>
+                            <p className="text-xs text-gray-600">{selectedAccount.number} - {selectedAccount.name}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(selectedAccount.number, `${selectedAccount.bank}-${selectedAccount.number}`)}
+                            className="ml-2"
+                          >
+                            {copiedAccount === `${selectedAccount.bank}-${selectedAccount.number}` ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      ) : null;
+                    })()}
+                    <p className="text-xs text-blue-600 mt-2 italic">
+                      *Wajib mengirimkan bukti pembayaran ke WhatsApp admin setelah transfer
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Payment Proof - Only for transfer */}
+              {watchPaymentMethod === 'transfer' && (
+                <div className="space-y-2">
+                  <Label htmlFor="paymentProof">Payment Proof *</Label>
+                  <Input
+                    id="paymentProof"
+                    type="file"
+                    {...register('paymentProof')}
+                    accept="image/*"
+                  />
+                  {errors.paymentProof && (
+                    <p className="text-sm text-red-500">{errors.paymentProof.message}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Cash Payment Notice */}
+              {watchPaymentMethod === 'cash' && (
+                <Card className="bg-yellow-50 border-yellow-200">
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-yellow-800">
+                      Pembayaran cash dilakukan saat sesi foto berlangsung. 
+                      Pastikan membawa uang tunai sesuai dengan total yang harus dibayar.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Price Summary */}
               {totalPrice.paymentAmount > 0 && (
@@ -487,21 +577,20 @@ export default function BookingPage() {
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span>Package Price:</span>
-                      <span>Rp {totalPrice.originalPrice.toLocaleString('id-ID')}</span>
+                      <span>Rp {formatPrice(totalPrice.originalPrice)}</span>
                     </div>
                     
                     {totalPrice.discountPercentage > 0 && (
-                      <div className="flex justify-between text-green-600">
-                        <span>Discount ({totalPrice.discountPercentage}%):</span>
-                        <span>-Rp {(totalPrice.originalPrice - totalPrice.discountedPrice).toLocaleString('id-ID')}</span>
-                      </div>
-                    )}
-                    
-                    {totalPrice.discountPercentage > 0 && (
-                      <div className="flex justify-between border-t pt-2">
-                        <span>After Discount:</span>
-                        <span>Rp {totalPrice.discountedPrice.toLocaleString('id-ID')}</span>
-                      </div>
+                      <>
+                        <div className="flex justify-between text-green-600">
+                          <span>Discount ({totalPrice.discountPercentage}%):</span>
+                          <span>-Rp {formatPrice(totalPrice.originalPrice - totalPrice.discountedPrice)}</span>
+                        </div>
+                        <div className="flex justify-between border-t pt-2">
+                          <span>After Discount:</span>
+                          <span>Rp {formatPrice(totalPrice.discountedPrice)}</span>
+                        </div>
+                      </>
                     )}
                     
                     <div className="border-t pt-3">
@@ -509,36 +598,21 @@ export default function BookingPage() {
                         <>
                           <div className="flex justify-between font-semibold text-lg text-blue-600">
                             <span>Down Payment (50%):</span>
-                            <span>Rp {totalPrice.paymentAmount.toLocaleString('id-ID')}</span>
+                            <span>Rp {formatPrice(totalPrice.paymentAmount)}</span>
                           </div>
                           <div className="flex justify-between text-sm text-gray-600 mt-1">
                             <span>Remaining Payment:</span>
-                            <span>Rp {(totalPrice.discountedPrice - totalPrice.paymentAmount).toLocaleString('id-ID')}</span>
+                            <span>Rp {formatPrice(totalPrice.discountedPrice - totalPrice.paymentAmount)}</span>
                           </div>
                         </>
                       ) : (
                         <div className="flex justify-between font-semibold text-lg text-green-600">
-                          <span>Full Payment:</span>
-                          <span>Rp {totalPrice.paymentAmount.toLocaleString('id-ID')}</span>
+                          <span>Total Payment:</span>
+                          <span>Rp {formatPrice(totalPrice.paymentAmount)}</span>
                         </div>
                       )}
                     </div>
                   </div>
-                </div>
-              )}
-
-              {/* Old Total Price - Keep for backward compatibility */}
-              {/* Old Total Price - Keep for backward compatibility */}
-              {totalPrice.paymentAmount > 0 && (
-                <div className="bg-gray-100 p-4 rounded-lg">
-                  <p className="text-lg font-semibold">
-                    You Pay Now: Rp {totalPrice.paymentAmount.toLocaleString('id-ID')}
-                  </p>
-                  {totalPrice.paymentType === 'down_payment' && (
-                    <p className="text-sm text-gray-600 mt-1">
-                      (Remaining: Rp {(totalPrice.discountedPrice - totalPrice.paymentAmount).toLocaleString('id-ID')})
-                    </p>
-                  )}
                 </div>
               )}
 

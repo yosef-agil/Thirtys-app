@@ -1,10 +1,32 @@
 // client/src/stores/useAuthStore.js
 import { create } from 'zustand';
-import { authService } from '../services/authService';
+import api from '../services/api';
 
-const useAuthStore = create((set) => ({
+export const authService = {
+  login: async (credentials) => {
+    const response = await api.post('/auth/login', credentials);
+    return response.data;
+  }
+};
+
+const useAuthStore = create((set, get) => ({
   isAuthenticated: false,
   admin: null,
+  
+  // Initialize auth state from localStorage
+  initializeAuth: () => {
+    const token = localStorage.getItem('token');
+    const adminData = localStorage.getItem('admin');
+    
+    if (token && adminData) {
+      set({ 
+        isAuthenticated: true, 
+        admin: JSON.parse(adminData) 
+      });
+      return true;
+    }
+    return false;
+  },
   
   login: async (credentials) => {
     try {
@@ -30,7 +52,7 @@ const useAuthStore = create((set) => ({
       console.error('Login error:', error);
       return { 
         success: false, 
-        error: error.message || 'Internal server error' 
+        error: error.response?.data?.error || error.message || 'Internal server error' 
       };
     }
   },
@@ -53,8 +75,12 @@ const useAuthStore = create((set) => ({
       return true;
     }
     
+    set({ isAuthenticated: false, admin: null });
     return false;
   },
 }));
+
+// Initialize auth on store creation
+useAuthStore.getState().initializeAuth();
 
 export default useAuthStore;

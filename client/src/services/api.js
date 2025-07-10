@@ -28,15 +28,18 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Only redirect on 401 if we're on admin pages
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('admin');
-      // Redirect to login if needed
-      if (window.location.pathname.startsWith('/admin') && 
-          !window.location.pathname.includes('/login')) {
+      const currentPath = window.location.pathname;
+      
+      // Only clear auth and redirect if we're in admin area
+      if (currentPath.startsWith('/admin') && !currentPath.includes('/login')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('admin');
         window.location.href = '/admin/login';
       }
     }
+    
     return Promise.reject(error);
   }
 );

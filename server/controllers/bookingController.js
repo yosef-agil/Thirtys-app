@@ -25,8 +25,10 @@ export const createBooking = async (req, res) => {
       faculty,
       university,
       paymentType,
-      totalPrice,  // Full package price from frontend
-      paidAmount   // Amount actually paid from frontend
+      paymentMethod,  // NEW
+      selectedBank,   // NEW
+      totalPrice,
+      paidAmount
     } = req.body;
 
     // Validate required fields
@@ -34,8 +36,18 @@ export const createBooking = async (req, res) => {
       throw new Error('Missing required fields');
     }
 
+    // Validate payment method
+    if (!paymentMethod || !['qris', 'transfer', 'cash'].includes(paymentMethod)) {
+      throw new Error('Invalid payment method');
+    }
+
+    // Validate bank selection for transfer payments
+    if (paymentMethod === 'transfer' && !req.file) {
+      throw new Error('Payment proof required for bank transfer');
+    }
+
     const bookingCode = generateBookingCode();
-    const paymentProof = req.file ? req.file.filename : null; // Store only filename, not full path
+    const paymentProof = req.file ? req.file.filename : null;
 
     // Calculate full package price (for verification and fallback)
     const [packageData] = await connection.execute(
@@ -94,19 +106,52 @@ export const createBooking = async (req, res) => {
       }
     }
 
-    // Insert booking with FULL PRICE (not paid amount)
-    const [result] = await connection.execute(`
-      INSERT INTO bookings (
-        booking_code, customer_name, phone_number, service_id, package_id,
-        booking_date, time_slot_id, faculty, university, total_price,
-        payment_type, payment_proof, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
-    `, [
-      bookingCode, customerName, phoneNumber, serviceId, packageId,
-      bookingDate, timeSlotId || null, faculty || null, university || null, 
-      finalFullPrice, // Store FULL package price, not paid amount
-      paymentType, paymentProof
-    ]);
+    // Check if columns exist (for backward compatibility)
+    const [columns] = await connection.execute(
+      "SHOW COLUMNS FROM bookings LIKE 'payment_method'"
+    );
+    
+    const hasPaymentMethodColumn = columns.length > 0;
+
+    // Insert booking
+    let insertQuery;
+    let insertParams;
+
+    if (hasPaymentMethodColumn) {
+      insertQuery = `
+        INSERT INTO bookings (
+          booking_code, customer_name, phone_number, service_id, package_id,
+          booking_date, time_slot_id, faculty, university, total_price,
+          payment_type, payment_method, selected_bank, payment_proof, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+      `;
+      insertParams = [
+        bookingCode, customerName, phoneNumber, serviceId, packageId,
+        bookingDate, timeSlotId || null, faculty || null, university || null, 
+        finalFullPrice,
+        paymentType, 
+        paymentMethod,        // NEW
+        selectedBank || null, // NEW
+        paymentProof
+      ];
+    } else {
+      // Fallback for old database schema
+      insertQuery = `
+        INSERT INTO bookings (
+          booking_code, customer_name, phone_number, service_id, package_id,
+          booking_date, time_slot_id, faculty, university, total_price,
+          payment_type, payment_proof, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+      `;
+      insertParams = [
+        bookingCode, customerName, phoneNumber, serviceId, packageId,
+        bookingDate, timeSlotId || null, faculty || null, university || null, 
+        finalFullPrice,
+        paymentType, paymentProof
+      ];
+    }
+
+    const [result] = await connection.execute(insertQuery, insertParams);
 
     // Update time slot booking relationship
     if (timeSlotId) {
@@ -141,6 +186,24 @@ export const createBooking = async (req, res) => {
 
     await connection.commit();
 
+    // Send WhatsApp notification (if configured)
+    const paymentMethodText = paymentMethod === 'transfer' ? `Transfer Bank (${selectedBank || 'Bank'})` : paymentMethod;
+    const whatsappMessage = `
+🎉 *New Booking Alert!*
+
+📋 Booking Code: ${bookingCode}
+👤 Customer: ${customerName}
+📱 Phone: ${phoneNumber}
+📅 Date: ${bookingDate}
+💰 Total: Rp ${finalFullPrice.toLocaleString('id-ID')}
+💳 Payment: ${paymentType.replace('_', ' ')} via ${paymentMethodText}
+
+Please check admin dashboard for details.
+    `;
+
+    // TODO: Implement WhatsApp notification
+    // await whatsappService.sendMessage(adminPhoneNumber, whatsappMessage);
+
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
@@ -166,9 +229,17 @@ export const createBooking = async (req, res) => {
 export const getAllBookings = async (req, res) => {
   try {
     const { status, serviceId, date, month } = req.query;
+    
+    // Check if payment_method column exists
+    const [columns] = await db.execute(
+      "SHOW COLUMNS FROM bookings LIKE 'payment_method'"
+    );
+    const hasPaymentMethodColumn = columns.length > 0;
+    
     let query = `
       SELECT b.*, s.name as service_name, sp.package_name,
         ts.start_time, ts.end_time
+        ${hasPaymentMethodColumn ? ', b.payment_method, b.selected_bank' : ''}
       FROM bookings b
       JOIN services s ON b.service_id = s.id
       JOIN service_packages sp ON b.package_id = sp.id
@@ -211,9 +282,16 @@ export const getBookingById = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Check if payment_method column exists
+    const [columns] = await db.execute(
+      "SHOW COLUMNS FROM bookings LIKE 'payment_method'"
+    );
+    const hasPaymentMethodColumn = columns.length > 0;
+
     const [bookings] = await db.execute(`
       SELECT b.*, s.name as service_name, sp.package_name,
         ts.start_time, ts.end_time
+        ${hasPaymentMethodColumn ? ', b.payment_method, b.selected_bank' : ''}
       FROM bookings b
       JOIN services s ON b.service_id = s.id
       JOIN service_packages sp ON b.package_id = sp.id

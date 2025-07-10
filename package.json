@@ -1,14 +1,21 @@
 {
-  "name": "photo-studio-booking",
-  "version": "1.0.0",
+  "name": "thirtys-app",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "start": "node server/server.js",
-    "build": "npm run install:all && npm run build:client",
+    "build": "npm run install:all && npm run build:client && npm run copy:uploads",
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",
-    "build:client": "cd client && npm run build"
+    "build:client": "cd client && npm run build",
+    "copy:uploads": "mkdir -p server/uploads && cp -r server/uploads/* server/uploads/ 2>/dev/null || true",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && nodemon server.js",
+    "dev:client": "cd client && npm run dev"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "concurrently": "^7.6.0"
   }
 }
