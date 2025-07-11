@@ -394,3 +394,113 @@ export const deleteBooking = async (req, res) => {
     connection.release();
   }
 };
+
+
+// Add this function to bookingController.js
+
+export const getBookingsWithPagination = async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 10, 
+      status, 
+      serviceId, 
+      month, 
+      search 
+    } = req.query;
+    
+    const offset = (page - 1) * limit;
+    
+    // Base query
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM bookings b
+      JOIN services s ON b.service_id = s.id
+      JOIN service_packages sp ON b.package_id = sp.id
+      WHERE 1=1
+    `;
+    
+    let dataQuery = `
+      SELECT b.*, s.name as service_name, sp.package_name,
+        ts.start_time, ts.end_time,
+        b.payment_method, b.selected_bank
+      FROM bookings b
+      JOIN services s ON b.service_id = s.id
+      JOIN service_packages sp ON b.package_id = sp.id
+      LEFT JOIN time_slots ts ON b.time_slot_id = ts.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    const countParams = [];
+    
+    // Add filters
+    if (status && status !== 'all') {
+      const condition = ' AND b.status = ?';
+      countQuery += condition;
+      dataQuery += condition;
+      params.push(status);
+      countParams.push(status);
+    }
+    
+    if (serviceId && serviceId !== 'all') {
+      const condition = ' AND b.service_id = ?';
+      countQuery += condition;
+      dataQuery += condition;
+      params.push(serviceId);
+      countParams.push(serviceId);
+    }
+    
+    if (month) {
+      const condition = ' AND DATE_FORMAT(b.booking_date, "%Y-%m") = ?';
+      countQuery += condition;
+      dataQuery += condition;
+      params.push(month);
+      countParams.push(month);
+    }
+    
+    if (search) {
+      const condition = ` AND (
+        b.booking_code LIKE ? OR
+        b.display_code LIKE ? OR
+        b.customer_name LIKE ? OR
+        b.phone_number LIKE ? OR
+        s.name LIKE ? OR
+        sp.package_name LIKE ?
+      )`;
+      countQuery += condition;
+      dataQuery += condition;
+      
+      const searchPattern = `%${search}%`;
+      params.push(...Array(6).fill(searchPattern));
+      countParams.push(...Array(6).fill(searchPattern));
+    }
+    
+    // Get total count
+    const [countResult] = await db.execute(countQuery, countParams);
+    const totalBookings = countResult[0].total;
+    
+    // Add sorting and pagination
+    dataQuery += ' ORDER BY b.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+    
+    // Get paginated data
+    const [bookings] = await db.execute(dataQuery, params);
+    
+    res.json({
+      bookings,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalBookings / limit),
+        totalBookings,
+        itemsPerPage: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get bookings with pagination error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Update routes in bookings.js to include:
+// router.get('/paginated', authenticateToken, requireAdmin, getBookingsWithPagination);

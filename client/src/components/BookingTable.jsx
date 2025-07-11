@@ -23,9 +23,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { Eye, Download } from 'lucide-react';
+import { Eye, Download, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import PDFInvoice from './PDFInvoice';
 import api from '../services/api';
@@ -40,27 +50,49 @@ const formatPrice = (price) => {
   }).format(numPrice);
 };
 
+// Utility function untuk format booking code
+const formatBookingCode = (booking) => {
+  // If already formatted as THIRTY format, return as is
+  if (booking.display_code) {
+    return booking.display_code;
+  }
+  
+  // Generate display code based on ID
+  const paddedId = String(booking.id).padStart(3, '0');
+  return `THIRTY${paddedId}`;
+};
+
 export default function BookingTable({ 
-  bookings, 
+  bookings = [], 
   onUpdate, 
   selectedBookings = [], 
   onSelectBooking = () => {}, 
-  onSelectAll = () => {} 
+  onSelectAll = () => {},
+  currentPage = 1,
+  totalPages = 1,
+  totalBookings = 0,
+  onPageChange = () => {},
+  itemsPerPage = 10
 }) {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState(null);
   const { toast } = useToast();
+
+  // Calculate display range
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalBookings);
 
   // Check if all bookings are selected
   const isAllSelected = bookings.length > 0 && selectedBookings.length === bookings.length;
-  const isIndeterminate = selectedBookings.length > 0 && selectedBookings.length < bookings.length;
 
   // Convert booking data to invoice format
   const convertToInvoiceData = (booking) => {
     if (!booking) return null;
 
     return {
-      inv_id: booking.booking_code,
+      inv_id: formatBookingCode(booking),
       customer: booking.customer_name,
       due_date: booking.booking_date,
       discount: 0,
@@ -92,15 +124,22 @@ export default function BookingTable({
     }
   };
 
-  const deleteBooking = async (bookingId) => {
-    if (!confirm('Are you sure you want to delete this booking?')) return;
+  const handleDeleteClick = (booking) => {
+    setBookingToDelete(booking);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!bookingToDelete) return;
     
     try {
-      await api.delete(`/bookings/${bookingId}`);
+      await api.delete(`/bookings/${bookingToDelete.id}`);
       toast({
         title: 'Success',
         description: 'Booking deleted',
       });
+      setDeleteDialogOpen(false);
+      setBookingToDelete(null);
       onUpdate();
     } catch (error) {
       toast({
@@ -131,116 +170,265 @@ export default function BookingTable({
     setDetailsOpen(true);
   };
 
+  // Mobile Card View Component
+  const BookingCard = ({ booking }) => (
+    <Card className="mb-4">
+      <CardContent className="pt-6">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <p className="font-semibold text-lg">{formatBookingCode(booking)}</p>
+            <p className="text-sm text-gray-600">{booking.customer_name}</p>
+          </div>
+          {getStatusBadge(booking.status)}
+        </div>
+        
+        <div className="space-y-2 text-sm">
+          <div>
+            <span className="text-gray-600">Service:</span>
+            <p className="font-medium">{booking.service_name} - {booking.package_name}</p>
+          </div>
+          
+          <div>
+            <span className="text-gray-600">Date:</span>
+            <p className="font-medium">
+              {format(new Date(booking.booking_date), 'dd MMM yyyy')}
+              {booking.start_time && ` (${booking.start_time} - ${booking.end_time})`}
+            </p>
+          </div>
+          
+          <div>
+            <span className="text-gray-600">Total:</span>
+            <p className="font-medium">Rp {formatPrice(booking.total_price)}</p>
+          </div>
+        </div>
+        
+        <div className="flex gap-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openDetails(booking)}
+            className="flex-1"
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            Details
+          </Button>
+          <Select
+            defaultValue={booking.status}
+            onValueChange={(value) => updateBookingStatus(booking.id, value)}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDeleteClick(booking)}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={isAllSelected}
-                  onCheckedChange={onSelectAll}
-                  aria-label="Select all"
-                  className="translate-y-[2px]"
-                />
-              </TableHead>
-              <TableHead>Booking Code</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {bookings.map((booking) => (
-              <TableRow key={booking.id}>
-                <TableCell>
+      {/* Desktop Table View */}
+      <div className="hidden md:block">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedBookings.includes(booking.id)}
-                    onCheckedChange={(checked) => onSelectBooking(booking.id, checked)}
-                    aria-label={`Select booking ${booking.booking_code}`}
+                    checked={isAllSelected}
+                    onCheckedChange={onSelectAll}
+                    aria-label="Select all"
                     className="translate-y-[2px]"
                   />
-                </TableCell>
-                <TableCell className="font-medium">{booking.booking_code}</TableCell>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{booking.customer_name}</p>
-                    <p className="text-sm text-gray-500">{booking.phone_number}</p>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{booking.service_name}</p>
-                    <p className="text-sm text-gray-500">{booking.package_name}</p>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {format(new Date(booking.booking_date), 'dd MMM yyyy')}
-                  {booking.start_time && (
-                    <p className="text-sm text-gray-500">
-                      {booking.start_time} - {booking.end_time}
-                    </p>
-                  )}
-                </TableCell>
-                <TableCell>
-                  Rp {formatPrice(booking.total_price)}
-                </TableCell>
-                <TableCell>{getStatusBadge(booking.status)}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openDetails(booking)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Details
-                    </Button>
-                    <Select
-                      defaultValue={booking.status}
-                      onValueChange={(value) => updateBookingStatus(booking.id, value)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => deleteBooking(booking.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </TableCell>
+                </TableHead>
+                <TableHead className="w-32">Code</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Service</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-center">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {bookings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    No bookings found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                bookings.map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedBookings.includes(booking.id)}
+                        onCheckedChange={(checked) => onSelectBooking(booking.id, checked)}
+                        aria-label={`Select booking ${formatBookingCode(booking)}`}
+                        className="translate-y-[2px]"
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {formatBookingCode(booking)}
+                    </TableCell>
+                    <TableCell>{booking.customer_name}</TableCell>
+                    <TableCell>
+                      <div className="max-w-xs">
+                        <p className="truncate">{booking.service_name}</p>
+                        <p className="text-sm text-gray-500 truncate">{booking.package_name}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(booking.booking_date), 'dd MMM yyyy')}
+                      {booking.start_time && (
+                        <p className="text-sm text-gray-500">
+                          {booking.start_time} - {booking.end_time}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      Rp {formatPrice(booking.total_price)}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(booking.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center gap-1">
+                        {/* Status Dropdown */}
+                        <Select
+                          defaultValue={booking.status}
+                          onValueChange={(value) => updateBookingStatus(booking.id, value)}
+                        >
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        {/* View Button */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openDetails(booking)}
+                          className="h-8 w-8"
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        
+                        {/* Delete Button */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(booking)}
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Delete Booking"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
-      {/* Details Modal */}
+      {/* Mobile Card View */}
+      <div className="md:hidden">
+        {bookings.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No bookings found
+          </div>
+        ) : (
+          bookings.map((booking) => (
+            <BookingCard key={booking.id} booking={booking} />
+          ))
+        )}
+      </div>
+
+      {/* Pagination Info & Controls */}
+      {totalBookings > 0 && (
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+          <p className="text-sm text-gray-600">
+            Showing {startItem}-{endItem} of {totalBookings} bookings
+          </p>
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the booking for {bookingToDelete?.customer_name}.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Details Modal - Same as before but with formatted code */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex justify-between items-center">
               <DialogTitle>Booking Details</DialogTitle>
               
-              {/* PDF Download Button */}
               {selectedBooking && (
                 <PDFDownloadLink
                   document={<PDFInvoice invoice={convertToInvoiceData(selectedBooking)} />}
-                  fileName={`Invoice-${selectedBooking.booking_code}.pdf`}
+                  fileName={`Invoice-${formatBookingCode(selectedBooking)}.pdf`}
                 >
                   {({ blob, url, loading, error }) => (
                     <Button 
@@ -299,7 +487,11 @@ export default function BookingTable({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <p className="text-xs font-medium text-gray-500">Booking Code</p>
-                      <p className="text-sm font-mono">{selectedBooking.booking_code}</p>
+                      <p className="text-sm font-mono">{formatBookingCode(selectedBooking)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500">Original Code</p>
+                      <p className="text-sm font-mono text-gray-500">{selectedBooking.booking_code}</p>
                     </div>
                     <div>
                       <p className="text-xs font-medium text-gray-500">Status</p>

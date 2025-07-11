@@ -503,7 +503,7 @@ export default function BookingPage() {
                 </Card>
               )}
 
-              {/* Show selected bank info */}
+              {/* Show selected bank info
               {watchPaymentMethod === 'transfer' && watchSelectedBank && (
                 <Card className="bg-blue-50 border-blue-200">
                   <CardHeader>
@@ -539,7 +539,7 @@ export default function BookingPage() {
                     </p>
                   </CardContent>
                 </Card>
-              )}
+              )} */}
 
               {/* Payment Proof - Only for transfer */}
               {watchPaymentMethod === 'transfer' && (
