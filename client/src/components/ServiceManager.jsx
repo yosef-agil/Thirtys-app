@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -13,16 +14,159 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package } from 'lucide-react';
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Package, 
+  ChevronDown, 
+  ChevronRight,
+  Clock,
+  Percent,
+} from 'lucide-react';
 import api from '../services/api';
+
+// Utility function untuk format harga
+const formatPrice = (price) => {
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  return new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(numPrice);
+};
+
+// Service Card Component
+const ServiceCard = ({ service, packages, onEditService, onDeleteService, onEditPackage, onDeletePackage, onAddPackage }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const servicePackages = packages.filter(pkg => pkg.service_id === service.id);
+  
+  return (
+    <Card className="mb-4">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <CollapsibleTrigger className="flex items-center gap-2 hover:text-gray-700 transition-colors">
+              {isOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+              <div className="text-left">
+                <h3 className="text-lg font-semibold">{service.name}</h3>
+                <p className="text-sm text-gray-600">{service.description}</p>
+              </div>
+            </CollapsibleTrigger>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Service Info Badges */}
+              <Badge variant="outline" className="gap-1">
+                Rp {formatPrice(service.base_price)}
+              </Badge>
+              
+              {service.discount_percentage > 0 && (
+                <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700">
+                  <Percent className="h-3 w-3" />
+                  {service.discount_percentage}% OFF
+                </Badge>
+              )}
+              
+              {service.has_time_slots && (
+                <Badge variant="secondary" className="gap-1 bg-blue-100 text-blue-700">
+                  <Clock className="h-3 w-3" />
+                  Time Slots
+                </Badge>
+              )}
+              
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEditService(service)}
+                >
+                  <Edit className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-1">Edit</span>
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onDeleteService(service.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-1">Delete</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CollapsibleContent>
+          <CardContent>
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-medium text-gray-700">Packages ({servicePackages.length})</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAddPackage(service.id)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Package
+                </Button>
+              </div>
+              
+              {servicePackages.length === 0 ? (
+                <p className="text-center py-8 text-gray-500">No packages yet. Add your first package!</p>
+              ) : (
+                <div className="space-y-3">
+                  {servicePackages.map((pkg) => (
+                    <div key={pkg.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div className="flex-1">
+                          <h5 className="font-medium">{pkg.package_name}</h5>
+                          <p className="text-sm text-gray-600 mt-1">{pkg.description}</p>
+                          <p className="text-lg font-semibold text-blue-600 mt-2">
+                            Rp {formatPrice(pkg.price)}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEditPackage(pkg)}
+                            className="h-8 w-8"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onDeletePackage(pkg.id)}
+                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+};
 
 export default function ServiceManager() {
   const [services, setServices] = useState([]);
@@ -31,7 +175,9 @@ export default function ServiceManager() {
   const [packageFormOpen, setPackageFormOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [editingPackage, setEditingPackage] = useState(null);
+  const [selectedServiceId, setSelectedServiceId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
   // Service form state
@@ -104,15 +250,15 @@ export default function ServiceManager() {
     setServiceForm({
       name: service.name,
       base_price: service.base_price,
-      description: service.description,
-      has_time_slots: service.has_time_slots,
-      discount_percentage: service.discount_percentage,
+      description: service.description || '',
+      has_time_slots: service.has_time_slots || false,
+      discount_percentage: service.discount_percentage || 0,
     });
     setServiceFormOpen(true);
   };
 
   const handleServiceDelete = async (serviceId) => {
-    if (!confirm('Are you sure you want to delete this service?')) return;
+    if (!confirm('Are you sure you want to delete this service? All packages will also be deleted.')) return;
     
     try {
       await api.delete(`/services/${serviceId}`);
@@ -121,7 +267,7 @@ export default function ServiceManager() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to delete service',
+        description: 'Failed to delete service. It may have existing bookings.',
         variant: 'destructive',
       });
     }
@@ -168,7 +314,7 @@ export default function ServiceManager() {
       service_id: pkg.service_id,
       package_name: pkg.package_name,
       price: pkg.price,
-      description: pkg.description,
+      description: pkg.description || '',
     });
     setPackageFormOpen(true);
   };
@@ -183,10 +329,17 @@ export default function ServiceManager() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to delete package',
+        description: 'Failed to delete package. It may have existing bookings.',
         variant: 'destructive',
       });
     }
+  };
+
+  const handleAddPackage = (serviceId) => {
+    resetPackageForm();
+    setSelectedServiceId(serviceId);
+    setPackageForm({ ...packageForm, service_id: serviceId });
+    setPackageFormOpen(true);
   };
 
   const resetPackageForm = () => {
@@ -197,12 +350,14 @@ export default function ServiceManager() {
       description: '',
     });
     setEditingPackage(null);
+    setSelectedServiceId(null);
   };
 
-  const getServiceName = (serviceId) => {
-    const service = services.find(s => s.id === serviceId);
-    return service?.name || 'Unknown Service';
-  };
+  // Filter services based on search
+  const filteredServices = services.filter(service =>
+    service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    service.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -214,250 +369,219 @@ export default function ServiceManager() {
 
   return (
     <div className="space-y-6">
-      {/* Services Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Services</CardTitle>
-            <Dialog open={serviceFormOpen} onOpenChange={setServiceFormOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetServiceForm}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Service
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Services & Packages</h2>
+          <p className="text-gray-600">Manage your photography services and pricing packages</p>
+        </div>
+        
+        <Dialog open={serviceFormOpen} onOpenChange={setServiceFormOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={resetServiceForm}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Service
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {editingService ? 'Edit Service' : 'Add New Service'}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleServiceSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Service Name</Label>
+                <Input
+                  id="name"
+                  value={serviceForm.name}
+                  onChange={(e) => setServiceForm({...serviceForm, name: e.target.value})}
+                  placeholder="e.g., Wedding Photography"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="base_price">Base Price (Rp)</Label>
+                <Input
+                  id="base_price"
+                  type="number"
+                  value={serviceForm.base_price}
+                  onChange={(e) => setServiceForm({...serviceForm, base_price: e.target.value})}
+                  placeholder="e.g., 5000000"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={serviceForm.description}
+                  onChange={(e) => setServiceForm({...serviceForm, description: e.target.value})}
+                  placeholder="Brief description of the service"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label htmlFor="discount_percentage">Discount (%)</Label>
+                <Input
+                  id="discount_percentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={serviceForm.discount_percentage}
+                  onChange={(e) => setServiceForm({...serviceForm, discount_percentage: parseInt(e.target.value) || 0})}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="has_time_slots"
+                  checked={serviceForm.has_time_slots}
+                  onCheckedChange={(checked) => setServiceForm({...serviceForm, has_time_slots: checked})}
+                />
+                <Label htmlFor="has_time_slots">Enable time slot booking</Label>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" className="flex-1">
+                  {editingService ? 'Update' : 'Create'} Service
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingService ? 'Edit Service' : 'Add New Service'}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleServiceSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Service Name</Label>
-                    <Input
-                      id="name"
-                      value={serviceForm.name}
-                      onChange={(e) => setServiceForm({...serviceForm, name: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="base_price">Base Price</Label>
-                    <Input
-                      id="base_price"
-                      type="number"
-                      value={serviceForm.base_price}
-                      onChange={(e) => setServiceForm({...serviceForm, base_price: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={serviceForm.description}
-                      onChange={(e) => setServiceForm({...serviceForm, description: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="discount_percentage">Discount (%)</Label>
-                    <Input
-                      id="discount_percentage"
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={serviceForm.discount_percentage}
-                      onChange={(e) => setServiceForm({...serviceForm, discount_percentage: parseInt(e.target.value) || 0})}
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="has_time_slots"
-                      checked={serviceForm.has_time_slots}
-                      onCheckedChange={(checked) => setServiceForm({...serviceForm, has_time_slots: checked})}
-                    />
-                    <Label htmlFor="has_time_slots">Has Time Slots</Label>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button type="submit">
-                      {editingService ? 'Update' : 'Create'} Service
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => setServiceFormOpen(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Base Price</TableHead>
-                <TableHead>Discount</TableHead>
-                <TableHead>Time Slots</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {services.map((service) => (
-                <TableRow key={service.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{service.name}</p>
-                      <p className="text-sm text-gray-500">{service.description}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>Rp {service.base_price?.toLocaleString('id-ID')}</TableCell>
-                  <TableCell>{service.discount_percentage}%</TableCell>
-                  <TableCell>{service.has_time_slots ? 'Yes' : 'No'}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleServiceEdit(service)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleServiceDelete(service.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setServiceFormOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-      {/* Packages Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Service Packages</CardTitle>
-            <Dialog open={packageFormOpen} onOpenChange={setPackageFormOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetPackageForm}>
-                  <Package className="h-4 w-4 mr-2" />
-                  Add Package
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingPackage ? 'Edit Package' : 'Add New Package'}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handlePackageSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="service_id">Service</Label>
-                    <select
-                      id="service_id"
-                      value={packageForm.service_id}
-                      onChange={(e) => setPackageForm({...packageForm, service_id: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="">Select a service</option>
-                      {services.map((service) => (
-                        <option key={service.id} value={service.id}>
-                          {service.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="package_name">Package Name</Label>
-                    <Input
-                      id="package_name"
-                      value={packageForm.package_name}
-                      onChange={(e) => setPackageForm({...packageForm, package_name: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="price">Price</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={packageForm.price}
-                      onChange={(e) => setPackageForm({...packageForm, price: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="pkg_description">Description</Label>
-                    <Textarea
-                      id="pkg_description"
-                      value={packageForm.description}
-                      onChange={(e) => setPackageForm({...packageForm, description: e.target.value})}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button type="submit">
-                      {editingPackage ? 'Update' : 'Create'} Package
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => setPackageFormOpen(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Service</TableHead>
-                <TableHead>Package Name</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {packages.map((pkg) => (
-                <TableRow key={pkg.id}>
-                  <TableCell>{getServiceName(pkg.service_id)}</TableCell>
-                  <TableCell className="font-medium">{pkg.package_name}</TableCell>
-                  <TableCell>Rp {pkg.price?.toLocaleString('id-ID')}</TableCell>
-                  <TableCell className="max-w-xs truncate">{pkg.description}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePackageEdit(pkg)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handlePackageDelete(pkg.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Search Bar */}
+      <div className="relative">
+        <Input
+          placeholder="Search services..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+        <svg
+          className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+      </div>
+
+      {/* Services List */}
+      {filteredServices.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">
+              {searchQuery ? 'No services found matching your search.' : 'No services yet. Create your first service!'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredServices.map((service) => (
+            <ServiceCard
+              key={service.id}
+              service={service}
+              packages={packages}
+              onEditService={handleServiceEdit}
+              onDeleteService={handleServiceDelete}
+              onEditPackage={handlePackageEdit}
+              onDeletePackage={handlePackageDelete}
+              onAddPackage={handleAddPackage}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Package Form Dialog */}
+      <Dialog open={packageFormOpen} onOpenChange={setPackageFormOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPackage ? 'Edit Package' : 'Add New Package'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handlePackageSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="service_id">Service</Label>
+              <Select
+                value={packageForm.service_id.toString()}
+                onValueChange={(value) => setPackageForm({...packageForm, service_id: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id.toString()}>
+                      {service.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="package_name">Package Name</Label>
+              <Input
+                id="package_name"
+                value={packageForm.package_name}
+                onChange={(e) => setPackageForm({...packageForm, package_name: e.target.value})}
+                placeholder="e.g., Premium Package"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="price">Price (Rp)</Label>
+              <Input
+                id="price"
+                type="number"
+                value={packageForm.price}
+                onChange={(e) => setPackageForm({...packageForm, price: e.target.value})}
+                placeholder="e.g., 8000000"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="pkg_description">Description</Label>
+              <Textarea
+                id="pkg_description"
+                value={packageForm.description}
+                onChange={(e) => setPackageForm({...packageForm, description: e.target.value})}
+                placeholder="What's included in this package"
+                rows={3}
+              />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button type="submit" className="flex-1">
+                {editingPackage ? 'Update' : 'Create'} Package
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setPackageFormOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

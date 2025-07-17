@@ -14,9 +14,9 @@
 }
 
 /* Smooth transitions */
-* {
+/* * {
   transition: all 0.2s ease;
-}
+} */
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
