@@ -8,31 +8,24 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { 
   Copy, 
   Check, 
   ChevronLeft,
-  User,
-  Phone,
-  Camera,
-  CalendarDays,
-  CreditCard,
   Upload,
-  Sparkles,
+  ArrowRight,
   Clock,
-  Package,
-  CheckCircle
+  CheckCircle,
+  Calendar as CalendarIcon,
+  CreditCard,
+  User2,
+  Phone,
+  MapPin,
+  Building2
 } from 'lucide-react';
 import { bookingService } from '../services/bookingService';
 import { cn } from '@/lib/utils';
@@ -46,195 +39,315 @@ const formatPrice = (price) => {
   }).format(numPrice);
 };
 
-// Progress Steps Component
-const ProgressSteps = ({ currentStep, steps }) => {
+// Modern Progress Component
+const ModernProgress = ({ currentStep, totalSteps }) => {
   return (
-    <div className="mb-8">
-      <div className="flex items-center justify-between relative">
-        {/* Progress Line */}
-        <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200">
-          <div 
-            className="h-full bg-blue-600 transition-all duration-300"
-            style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-          />
-        </div>
-        
-        {/* Steps */}
-        {steps.map((step, index) => (
-          <div key={index} className="relative flex flex-col items-center">
+    <div className="relative mb-12">
+      {/* Progress Line */}
+      <div className="absolute top-2.5 left-0 right-0 h-0.5 bg-gray-100">
+        <div 
+          className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 ease-out"
+          style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+        />
+      </div>
+      
+      {/* Steps */}
+      <div className="relative flex justify-between">
+        {[...Array(totalSteps)].map((_, index) => (
+          <div key={index} className="flex flex-col items-center">
             <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 z-10 bg-white",
+              "w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 bg-white border-2",
               index + 1 <= currentStep 
-                ? "bg-blue-600 text-white shadow-lg scale-110 border-0" 
-                : "bg-white text-gray-500 border-2 border-gray-300"
+                ? "border-blue-600 text-blue-600" 
+                : "border-gray-200 text-gray-400"
             )}>
               {index + 1 < currentStep ? (
-                <Check className="h-5 w-5" />
-              ) : (
-                index + 1
-              )}
+                <div className="w-2 h-2 rounded-full bg-blue-600" />
+              ) : null}
             </div>
-            <span className={cn(
-              "text-xs mt-2 text-center hidden sm:block transition-colors duration-300",
-              index + 1 <= currentStep ? "text-gray-900 font-medium" : "text-gray-400"
-            )}>
-              {step}
-            </span>
           </div>
         ))}
       </div>
-      
-      {/* Mobile Step Indicator */}
-      <div className="mt-4 text-center sm:hidden">
-        <span className="text-sm font-medium text-gray-900">
-          Step {currentStep}: {steps[currentStep - 1]}
-        </span>
-      </div>
     </div>
   );
 };
 
-// Package Card Component
-const PackageCard = ({ pkg, selected, onSelect, discountPercentage }) => {
-  const discountedPrice = discountPercentage > 0 
-    ? pkg.price * (1 - discountPercentage / 100)
-    : pkg.price;
-    
+// Service Selection Card
+const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, selectedPackageId }) => {
   return (
-    <div
-      className={cn(
-        "relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300",
-        selected 
-          ? "border-blue-600 bg-blue-50 shadow-lg scale-[1.02]" 
-          : "border-gray-200 hover:border-gray-300 hover:shadow-md"
-      )}
-      onClick={() => onSelect(pkg.id.toString())}
-    >
-      {/* Selected Indicator */}
-      {selected && (
-        <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-          <Check className="h-4 w-4 text-white" />
-        </div>
-      )}
-      
-      <h4 className="font-semibold text-gray-900">{pkg.package_name}</h4>
-      <p className="text-sm text-gray-600 mt-1">{pkg.description}</p>
-      
-      <div className="mt-3">
-        {discountPercentage > 0 ? (
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-blue-600">
-              Rp {formatPrice(discountedPrice)}
-            </span>
-            <span className="text-sm text-gray-400 line-through">
-              Rp {formatPrice(pkg.price)}
-            </span>
-            <Badge variant="secondary" className="bg-green-100 text-green-700">
-              {discountPercentage}% OFF
-            </Badge>
-          </div>
-        ) : (
-          <span className="text-lg font-bold text-gray-900">
-            Rp {formatPrice(pkg.price)}
-          </span>
+    <div className="mb-4">
+      <div
+        className={cn(
+          "p-6 rounded-2xl border cursor-pointer transition-all duration-300 bg-white",
+          selected 
+            ? "border-blue-500 shadow-lg shadow-blue-100" 
+            : "border-gray-100 hover:border-gray-200 hover:shadow-md"
         )}
-      </div>
-    </div>
-  );
-};
-
-// Time Slot Component
-const TimeSlotCard = ({ slot, selected, onSelect }) => {
-  return (
-    <div
-      className={cn(
-        "p-3 rounded-lg border cursor-pointer transition-all duration-300",
-        selected
-          ? "border-blue-600 bg-blue-50 shadow-md"
-          : "border-gray-200 hover:border-gray-300"
-      )}
-      onClick={() => onSelect(slot.id.toString())}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-gray-400" />
-          <span className="font-medium">{slot.start_time} - {slot.end_time}</span>
-        </div>
-        <Badge 
-          variant={slot.available_slots > 2 ? "secondary" : "destructive"}
-          className={slot.available_slots > 2 ? "bg-green-100 text-green-700" : ""}
-        >
-          {slot.available_slots} left
-        </Badge>
-      </div>
-    </div>
-  );
-};
-
-// Bank Account Card Component
-const BankAccountCard = ({ account, onCopy, copied }) => {
-  return (
-    <div className="flex items-center justify-between p-4 border rounded-lg bg-white hover:shadow-sm transition-shadow">
-      <div className="flex items-center gap-3">
-        <div className={cn(
-          "w-12 h-12 rounded-lg flex items-center justify-center font-bold text-white",
-          account.bank === 'BCA' ? "bg-blue-600" :
-          account.bank === 'BRI' ? "bg-blue-500" : "bg-purple-600"
-        )}>
-          {account.bank}
-        </div>
-        <div>
-          <p className="font-medium">{account.name}</p>
-          <p className="text-sm text-gray-600 font-mono">{account.number}</p>
-        </div>
-      </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => onCopy(account.number, `${account.bank}-${account.number}`)}
+        onClick={() => onSelect(service.id.toString())}
       >
-        {copied === `${account.bank}-${account.number}` ? (
-          <Check className="h-4 w-4 text-green-600" />
-        ) : (
-          <Copy className="h-4 w-4" />
-        )}
-      </Button>
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <h4 className="text-lg font-semibold text-gray-900 mb-1">{service.name}</h4>
+            <p className="text-sm text-gray-500 mb-3">{service.description}</p>
+            {service.has_time_slots && (
+              <div className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full">
+                <Clock className="h-3.5 w-3.5" />
+                Time slot booking
+              </div>
+            )}
+          </div>
+          <div className="text-right ml-4">
+            <p className="text-xs text-gray-500 mb-1">Starting from</p>
+            <p className="text-xl font-bold text-gray-900">
+              Rp {formatPrice(service.base_price)}
+            </p>
+            {service.discount_percentage > 0 && (
+              <Badge className="mt-2 bg-emerald-50 text-emerald-700 border-0">
+                {service.discount_percentage}% OFF
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Package Selection */}
+      {selected && packages.length > 0 && (
+        <div className="mt-4 pl-4 border-l-2 border-blue-100 ml-3 animate-in slide-in-from-top duration-300">
+          <p className="text-sm font-medium text-gray-700 mb-3">Choose your package</p>
+          <div className="grid gap-3">
+            {packages.map(pkg => (
+              <label
+                key={pkg.id}
+                className={cn(
+                  "relative p-4 rounded-xl border cursor-pointer transition-all duration-200",
+                  selectedPackageId === pkg.id.toString()
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300 bg-white"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPackageSelect(pkg.id.toString());
+                }}
+              >
+                <input
+                  type="radio"
+                  name="package"
+                  value={pkg.id}
+                  className="sr-only"
+                />
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-gray-900">{pkg.package_name}</p>
+                    <p className="text-sm text-gray-500 mt-0.5 w-36">{pkg.description}</p>
+                  </div>
+                  <div className="text-right ml-4">
+                    {service.discount_percentage > 0 ? (
+                      <div>
+                        <p className="text-lg font-bold text-blue-600">
+                          Rp {formatPrice(pkg.price * (1 - service.discount_percentage / 100))}
+                        </p>
+                        <p className="text-xs text-gray-400 line-through">
+                          Rp {formatPrice(pkg.price)}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-l font-bold text-gray-900">
+                        Rp {formatPrice(pkg.price)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {selectedPackageId === pkg.id.toString() && (
+                  <div className="absolute inset-0 border-2 border-blue-600 rounded-xl pointer-events-none"></div>
+                )}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
+  );
+};
+
+// Time Slot Selection
+const TimeSlotGrid = ({ slots, selected, onSelect }) => {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+      {slots.map(slot => (
+        <button
+          key={slot.id}
+          type="button"
+          onClick={() => onSelect(slot.id.toString())}
+          className={cn(
+            "p-2.5 sm:p-3 rounded-lg sm:rounded-xl border text-xs sm:text-sm font-medium transition-all duration-200",
+            selected === slot.id.toString()
+              ? "border-blue-500 bg-blue-50 text-blue-700"
+              : "border-gray-200 hover:border-gray-300 text-gray-700 bg-white"
+          )}
+        >
+          <div className="text-center">
+            <p className="font-semibold">{slot.start_time}</p>
+            <p className="text-xs mt-0.5 sm:mt-1 opacity-75">
+              {slot.available_slots} slots left
+            </p>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// Modern Input Component
+const ModernInput = ({ label, icon: Icon, error, required, ...props }) => {
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
+      </Label>
+      <div className="relative">
+        {Icon && (
+          <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        )}
+        <Input
+          className={cn(
+            "h-12 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all",
+            Icon && "pl-10",
+            error && "border-red-300"
+          )}
+          {...props}
+        />
+      </div>
+      {error && (
+        <p className="text-xs text-red-500 mt-1">{error}</p>
+      )}
+    </div>
+  );
+};
+
+// Payment Method Card
+const PaymentMethodCard = ({ method, selected, onSelect, disabled = false }) => {
+  const icons = {
+    qris: '🔲',
+    transfer: '🏦',
+    cash: '💵'
+  };
+  
+  const labels = {
+    qris: 'QRIS',
+    transfer: 'Bank Transfer',
+    cash: 'Cash'
+  };
+  
+  const descriptions = {
+    qris: 'Scan and pay instantly',
+    transfer: 'Transfer to our bank account',
+    cash: 'Pay when you arrive'
+  };
+  
+  return (
+    <label
+      className={cn(
+        "relative flex items-center p-4 rounded-xl border cursor-pointer transition-all duration-200",
+        selected
+          ? "border-blue-500 bg-blue-50"
+          : "border-gray-200 hover:border-gray-300 bg-white",
+        disabled && "opacity-50 cursor-not-allowed"
+      )}
+    >
+      <input
+        type="radio"
+        name="paymentMethod"
+        value={method}
+        className="sr-only"
+        onChange={() => !disabled && onSelect(method)}
+        disabled={disabled}
+      />
+      <div className="flex items-center flex-1">
+        <span className="text-2xl mr-3">{icons[method]}</span>
+        <div>
+          <p className="font-medium text-gray-900">
+            {labels[method]}
+            {method === 'qris' && (
+              <Badge variant="outline" className="ml-2 text-xs">Coming Soon</Badge>
+            )}
+          </p>
+          <p className="text-sm text-gray-500">{descriptions[method]}</p>
+        </div>
+      </div>
+      {selected && !disabled && (
+        <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+          <Check className="h-3 w-3 text-white" />
+        </div>
+      )}
+    </label>
   );
 };
 
 // Thank You Page Component
-const ThankYouPage = ({ bookingCode }) => {
+const ThankYouPage = ({ bookingDetails }) => {
   const navigate = useNavigate();
   
   return (
-    <div className="text-center py-12">
-      <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-        <CheckCircle className="h-10 w-10 text-green-600" />
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center px-4">
+      <div className="max-w-md w-full">
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-200">
+            <CheckCircle className="h-10 w-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">Booking Confirmed!</h1>
+          <p className="text-gray-600">Thank you for choosing Thirtys Studio</p>
+        </div>
+        
+        <Card className="border-0 shadow-xl bg-white">
+          <CardContent className="p-6">
+            <div className="text-center mb-6">
+              <p className="text-sm text-gray-500 mb-2">Your booking code</p>
+              <p className="text-2xl font-bold text-blue-600 font-mono bg-blue-50 py-3 px-4 rounded-lg">
+                {bookingDetails.bookingCode}
+              </p>
+            </div>
+            
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Customer</span>
+                <span className="font-medium">{bookingDetails.customerName}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Service</span>
+                <span className="font-medium">{bookingDetails.serviceName}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Package</span>
+                <span className="font-medium">{bookingDetails.packageName}</span>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t">
+                <span className="text-sm font-medium">Total Payment</span>
+                <span className="text-xl font-bold text-blue-600">
+                  Rp {formatPrice(bookingDetails.totalAmount)}
+                </span>
+              </div>
+            </div>
+            
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600 text-center">
+                We'll contact you via WhatsApp within 24 hours to confirm your session details.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Button
+          onClick={() => navigate('/')}
+          className="w-full mt-6 h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg shadow-blue-200"
+        >
+          Back to Home
+        </Button>
       </div>
-      <h2 className="text-3xl font-bold text-gray-900 mb-3">Booking Confirmed!</h2>
-      <p className="text-gray-600 mb-6">Thank you for choosing Thirtys Studio</p>
-      
-      <div className="bg-gray-50 rounded-xl p-6 max-w-sm mx-auto mb-8">
-        <p className="text-sm text-gray-600 mb-2">Your booking code is</p>
-        <p className="text-2xl font-bold text-blue-600 font-mono">{bookingCode}</p>
-        <p className="text-sm text-gray-600 mt-3">
-          We will contact you via WhatsApp within 24 hours to confirm your session.
-        </p>
-      </div>
-      
-      <Button
-        onClick={() => navigate('/')}
-        className="bg-blue-600 hover:bg-blue-700"
-      >
-        Back to Home
-      </Button>
     </div>
   );
 };
 
-// Dynamic schema remains the same
+// Dynamic schema
 const createBookingSchema = (isGraduationPhoto) => {
   const baseSchema = {
     customerName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -250,11 +363,8 @@ const createBookingSchema = (isGraduationPhoto) => {
   };
 
   if (isGraduationPhoto) {
-    baseSchema.faculty = z.string().min(1, 'Faculty is required for graduation photography');
-    baseSchema.university = z.string().min(1, 'University is required for graduation photography');
-  } else {
-    baseSchema.faculty = z.string().optional();
-    baseSchema.university = z.string().optional();
+    baseSchema.faculty = z.string().min(1, 'Faculty is required');
+    baseSchema.university = z.string().min(1, 'University is required');
   }
 
   return z.object(baseSchema);
@@ -277,13 +387,12 @@ export default function BookingPage() {
   const [copiedAccount, setCopiedAccount] = useState('');
   const [paymentProofPreview, setPaymentProofPreview] = useState(null);
   const [showThankYou, setShowThankYou] = useState(false);
-  const [bookingCode, setBookingCode] = useState('');
+  const [bookingDetails, setBookingDetails] = useState(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const steps = ['Personal Info', 'Service', 'Schedule', 'Payment', 'Review'];
+  const steps = 4;
 
-  // Bank accounts data
   const bankAccounts = [
     { bank: 'BCA', number: '580201024795533', name: 'Nadhita Crisya' },
     { bank: 'BRI', number: '0132189968', name: 'Nadhita Crisya' },
@@ -334,7 +443,6 @@ export default function BookingPage() {
     loadServices();
   }, []);
 
-  // Auto-set payment type for Self Photo
   useEffect(() => {
     if (isSelfPhoto) {
       setValue('paymentType', 'full_payment');
@@ -376,14 +484,12 @@ export default function BookingPage() {
       
       if (pkg) {
         let originalPrice = pkg.price;
-        
-        // Apply discount if any
         let discountedPrice = originalPrice;
+        
         if (selectedService?.discount_percentage) {
           discountedPrice = originalPrice * (1 - selectedService.discount_percentage / 100);
         }
         
-        // Calculate payment amount based on type
         let paymentAmount = discountedPrice;
         if (watchPaymentType === 'down_payment') {
           paymentAmount = discountedPrice * 0.5;
@@ -400,7 +506,6 @@ export default function BookingPage() {
     }
   }, [watchPackage, watchPaymentType, packages, selectedService]);
 
-  // Handle payment proof preview
   useEffect(() => {
     if (watchPaymentProof && watchPaymentProof[0]) {
       const file = watchPaymentProof[0];
@@ -450,7 +555,6 @@ export default function BookingPage() {
     }
   };
 
-  // Navigation handlers
   const handleNext = async () => {
     let fieldsToValidate = [];
     
@@ -480,7 +584,11 @@ export default function BookingPage() {
     
     const isValid = await trigger(fieldsToValidate);
     if (isValid) {
-      setCurrentStep(prev => Math.min(prev + 1, steps.length));
+      if (currentStep === steps) {
+        handleSubmit(onSubmit)();
+      } else {
+        setCurrentStep(prev => Math.min(prev + 1, steps));
+      }
     }
   };
 
@@ -494,7 +602,6 @@ export default function BookingPage() {
     try {
       const formData = new FormData();
       
-      // Add all fields to FormData
       formData.append('customerName', data.customerName);
       formData.append('phoneNumber', data.phoneNumber);
       formData.append('serviceId', data.serviceId);
@@ -503,13 +610,11 @@ export default function BookingPage() {
       formData.append('paymentType', data.paymentType);
       formData.append('paymentMethod', data.paymentMethod);
       
-      // Optional fields
       if (data.timeSlotId) formData.append('timeSlotId', data.timeSlotId);
       if (data.faculty) formData.append('faculty', data.faculty);
       if (data.university) formData.append('university', data.university);
       if (data.selectedBank) formData.append('selectedBank', data.selectedBank);
       
-      // File upload - only for transfer payments
       if (data.paymentMethod === 'transfer' && data.paymentProof && data.paymentProof[0]) {
         formData.append('paymentProof', data.paymentProof[0]);
       }
@@ -517,7 +622,14 @@ export default function BookingPage() {
       const response = await bookingService.createBooking(formData);
       
       if (response.success) {
-        setBookingCode(response.bookingCode);
+        const details = {
+          bookingCode: response.bookingCode,
+          customerName: data.customerName,
+          serviceName: selectedService?.name,
+          packageName: packages.find(p => p.id.toString() === data.packageId)?.package_name,
+          totalAmount: totalPrice.paymentAmount
+        };
+        setBookingDetails(details);
         setShowThankYou(true);
       }
     } catch (error) {
@@ -533,739 +645,502 @@ export default function BookingPage() {
   };
 
   if (showThankYou) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4">
-        <Card className="max-w-lg w-full">
-          <CardContent className="pt-6">
-            <ThankYouPage bookingCode={bookingCode} />
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <ThankYouPage bookingDetails={bookingDetails} />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+      <div className="bg-white border-b">
+        <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={() => navigate('/')}
-              className="gap-2"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <h1 className="text-xl font-bold text-blue-600">
-              Thirtys Studio
-            </h1>
-            <div className="w-20" /> {/* Spacer for center alignment */}
+              <ChevronLeft className="h-5 w-5" />
+              <span className="text-sm font-medium">Back</span>
+            </button>
+            <h1 className="text-lg font-semibold text-gray-900">Thirtys Studio</h1>
+            <div className="w-16" />
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Main Card */}
-        <Card className="shadow-xl border-0">
-          <CardHeader className="pb-0">
-            <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Book Your Session</h2>
-              <p className="text-gray-600">Complete your booking in just a few steps</p>
-            </div>
-            
-            {/* Progress Steps */}
-            <ProgressSteps currentStep={currentStep} steps={steps} />
-          </CardHeader>
-          
-          <CardContent className="pt-8">
-            <form onSubmit={handleSubmit(onSubmit)}>
-              {/* Step 1: Personal Information */}
-              {currentStep === 1 && (
-                <div className="space-y-6 animate-in slide-in-from-right duration-300">
-                  <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <User className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-semibold">Let's get to know you</h3>
-                    <p className="text-gray-600 mt-2">We'll need some basic information to get started</p>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="customerName" className="text-base">Full Name</Label>
-                      <Input
-                        id="customerName"
-                        {...register('customerName')}
-                        placeholder="John Doe"
-                        className="mt-2 h-12"
-                      />
-                      {errors.customerName && (
-                        <p className="text-sm text-red-500 mt-1">{errors.customerName.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="phoneNumber" className="text-base">Phone Number</Label>
-                      <div className="relative mt-2">
-                        <Phone className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
-                        <Input
-                          id="phoneNumber"
-                          {...register('phoneNumber')}
-                          placeholder="+62 812 3456 7890"
-                          className="pl-10 h-12"
-                        />
-                      </div>
-                      {errors.phoneNumber && (
-                        <p className="text-sm text-red-500 mt-1">{errors.phoneNumber.message}</p>
-                      )}
-                    </div>
-                  </div>
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        {/* Progress */}
+        <div className="px-4 sm:px-0">
+          <ModernProgress currentStep={currentStep} totalSteps={steps} />
+        </div>
+        
+        {/* Form Container */}
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8">
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {/* Step 1: Personal Information */}
+            {currentStep === 1 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Let's get started</h2>
+                  <p className="text-gray-600 mt-2">We'll need some basic information to book your session</p>
                 </div>
-              )}
+                
+                <div className="space-y-4 mt-8">
+                  <ModernInput
+                    label="Full Name"
+                    icon={User2}
+                    required
+                    {...register('customerName')}
+                    placeholder="Enter your full name"
+                    error={errors.customerName?.message}
+                  />
+                  
+                  <ModernInput
+                    label="Phone Number"
+                    icon={Phone}
+                    required
+                    {...register('phoneNumber')}
+                    placeholder="+62 812 3456 7890"
+                    error={errors.phoneNumber?.message}
+                  />
+                </div>
+              </div>
+            )}
 
-              {/* Step 2: Service Selection */}
-              {currentStep === 2 && (
-                <div className="space-y-6 animate-in slide-in-from-right duration-300">
-                  <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Camera className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-semibold">Choose Your Service</h3>
-                    <p className="text-gray-600 mt-2">Select the perfect package for your needs</p>
-                  </div>
+            {/* Step 2: Service Selection */}
+            {currentStep === 2 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Choose your service</h2>
+                  <p className="text-gray-600 mt-2">Select the perfect package for your needs</p>
+                </div>
+                
+                <div className="mt-8">
+                  {services.map(service => (
+                    <ServiceCard
+                      key={service.id}
+                      service={service}
+                      selected={watchService === service.id.toString()}
+                      onSelect={(id) => setValue('serviceId', id)}
+                      packages={packages}
+                      selectedPackageId={watchPackage}
+                      onPackageSelect={(id) => setValue('packageId', id)}
+                    />
+                  ))}
+                  {errors.serviceId && (
+                    <p className="text-sm text-red-500 mt-2">{errors.serviceId.message}</p>
+                  )}
+                  {errors.packageId && watchService && (
+                    <p className="text-sm text-red-500 mt-2">{errors.packageId.message}</p>
+                  )}
+                </div>
 
-                  {/* Service Selection */}
-                  <div>
-                    <Label className="text-base mb-3 block">Select Service</Label>
-                    <div className="grid gap-3">
-                      {services.map(service => (
-                        <div key={service.id}>
-                          <div
-                            className={cn(
-                              "p-4 rounded-xl border-2 cursor-pointer transition-all duration-300",
-                              watchService === service.id.toString()
-                                ? "border-blue-600 bg-blue-50"
-                                : "border-gray-200 hover:border-gray-300"
-                            )}
-                            onClick={() => setValue('serviceId', service.id.toString())}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h4 className="font-semibold text-gray-900">{service.name}</h4>
-                                <p className="text-sm text-gray-600 mt-1">{service.description}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm text-gray-500">Starting from</p>
-                                <p className="font-bold text-lg text-gray-900">
-                                  Rp {formatPrice(service.base_price)}
-                                </p>
-                                {service.discount_percentage > 0 && (
-                                  <Badge className="mt-1 bg-green-100 text-green-700">
-                                    {service.discount_percentage}% OFF
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {service.has_time_slots && (
-                              <Badge variant="outline" className="mt-2 gap-1">
-                                <Clock className="h-3 w-3" />
-                                Time slot booking
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          {/* Package Selection - Show immediately after service selection */}
-                          {watchService === service.id.toString() && packages.length > 0 && (
-                            <div className="mt-4 ml-4 animate-in slide-in-from-top duration-300">
-                              <Label className="text-sm mb-2 block">Select Package</Label>
-                              <div className="grid gap-3 sm:grid-cols-2">
-                                {packages.map(pkg => (
-                                  <PackageCard
-                                    key={pkg.id}
-                                    pkg={pkg}
-                                    selected={watchPackage === pkg.id.toString()}
-                                    onSelect={(id) => setValue('packageId', id)}
-                                    discountPercentage={service.discount_percentage || 0}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    {errors.serviceId && (
-                      <p className="text-sm text-red-500 mt-1">{errors.serviceId.message}</p>
-                    )}
-                    {errors.packageId && watchService && (
-                      <p className="text-sm text-red-500 mt-1">{errors.packageId.message}</p>
-                    )}
-                  </div>
-
-                  {/* Graduation Fields */}
-                  {isGraduationPhotography && watchPackage && (
-                    <div className="space-y-4 p-4 bg-blue-50 rounded-xl animate-in slide-in-from-bottom duration-300">
-                      <p className="text-sm font-medium text-blue-900">Additional Information Required</p>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div>
-                          <Label htmlFor="faculty">Faculty *</Label>
+                {/* Graduation Fields */}
+                {isGraduationPhotography && watchPackage && (
+                  <div className="space-y-4 p-6 bg-blue-50 rounded-xl animate-in slide-in-from-bottom duration-300">
+                    <p className="text-sm font-medium text-blue-900">Additional information required</p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="faculty" className="text-sm font-medium text-gray-700 mb-2 block">
+                          Faculty <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="relative">
+                          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
                             id="faculty"
                             {...register('faculty')}
                             placeholder="e.g., Faculty of Engineering"
-                            className="mt-2"
+                            className="h-12 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all pl-10 bg-white"
                           />
-                          {errors.faculty && (
-                            <p className="text-sm text-red-500 mt-1">{errors.faculty.message}</p>
-                          )}
                         </div>
-                        <div>
-                          <Label htmlFor="university">University *</Label>
+                        {errors.faculty && (
+                          <p className="text-sm text-red-500 mt-1">{errors.faculty.message}</p>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="university" className="text-sm font-medium text-gray-700 mb-2 block">
+                          University <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
                             id="university"
                             {...register('university')}
                             placeholder="e.g., University of Indonesia"
-                            className="mt-2"
+                            className="h-12 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all pl-10 bg-white"
                           />
-                          {errors.university && (
-                            <p className="text-sm text-red-500 mt-1">{errors.university.message}</p>
-                          )}
                         </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Step 3: Schedule */}
-              {currentStep === 3 && (
-                <div className="space-y-6 animate-in slide-in-from-right duration-300">
-                  <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CalendarDays className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-semibold">Pick Your Date</h3>
-                    <p className="text-gray-600 mt-2">When would you like to have your session?</p>
-                  </div>
-
-                  {/* Date and Time Slot Selection */}
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Date Selection */}
-                    <div>
-                      <Label className="text-base mb-3 block">Select Date</Label>
-                      <div className="flex justify-center">
-                        <Calendar
-                          mode="single"
-                          selected={watchDate}
-                          onSelect={(date) => setValue('bookingDate', date)}
-                          disabled={(date) => date < new Date()}
-                          className="rounded-md border"
-                        />
-                      </div>
-                      {errors.bookingDate && (
-                        <p className="text-sm text-red-500 mt-1 text-center">{errors.bookingDate.message}</p>
-                      )}
-                    </div>
-
-                    {/* Time Slot Selection - Show on right side for desktop */}
-                    {selectedService?.has_time_slots && (
-                      <div>
-                        <Label className="text-base mb-3 block">Select Time Slot</Label>
-                        {timeSlots.length > 0 ? (
-                          <div className="grid gap-3">
-                            {timeSlots.map(slot => (
-                              <TimeSlotCard
-                                key={slot.id}
-                                slot={slot}
-                                selected={watch('timeSlotId') === slot.id.toString()}
-                                onSelect={(id) => setValue('timeSlotId', id)}
-                              />
-                            ))}
-                          </div>
-                        ) : watchDate ? (
-                          <div className="text-center py-8 text-gray-500">
-                            <Clock className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                            <p>No time slots available for this date</p>
-                            <p className="text-sm mt-1">Please select another date</p>
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            <CalendarDays className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                            <p>Please select a date first</p>
-                          </div>
-                        )}
-                        {errors.timeSlotId && (
-                          <p className="text-sm text-red-500 mt-1">{errors.timeSlotId.message}</p>
+                        {errors.university && (
+                          <p className="text-sm text-red-500 mt-1">{errors.university.message}</p>
                         )}
                       </div>
-                    )}
-                  </div>
-
-                  {watchDate && (
-                    <div className="text-center p-4 bg-blue-50 rounded-xl">
-                      <p className="text-sm text-blue-900">
-                        <span className="font-medium">Selected Date:</span>{' '}
-                        {format(watchDate, 'EEEE, dd MMMM yyyy')}
-                      </p>
                     </div>
-                  )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Schedule */}
+            {currentStep === 3 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Pick your date</h2>
+                  <p className="text-gray-600 mt-2">When would you like to have your session?</p>
                 </div>
-              )}
 
-              {/* Step 4: Payment */}
-              {currentStep === 4 && (
-                <div className="space-y-6 animate-in slide-in-from-right duration-300">
-                  <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CreditCard className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-semibold">Payment Details</h3>
-                    <p className="text-gray-600 mt-2">Choose your preferred payment method</p>
-                  </div>
-
-                  {/* Payment Type - Conditional for Self Photo */}
-                  {!isSelfPhoto && (
-                    <div>
-                      <Label className="text-base mb-3 block">Payment Type</Label>
-                      <RadioGroup
-                        value={watchPaymentType}
-                        onValueChange={(value) => setValue('paymentType', value)}
-                      >
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <label
-                            htmlFor="down_payment"
-                            className={cn(
-                              "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all",
-                              watchPaymentType === 'down_payment'
-                                ? "border-blue-600 bg-blue-50"
-                                : "border-gray-200 hover:border-gray-300"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <RadioGroupItem value="down_payment" id="down_payment" />
-                              <div>
-                                <p className="font-medium">Down Payment</p>
-                                <p className="text-sm text-gray-600">Pay 50% now</p>
-                              </div>
-                            </div>
-                            <Badge variant="secondary">50%</Badge>
-                          </label>
-                          
-                          <label
-                            htmlFor="full_payment"
-                            className={cn(
-                              "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all",
-                              watchPaymentType === 'full_payment'
-                                ? "border-blue-600 bg-blue-50"
-                                : "border-gray-200 hover:border-gray-300"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <RadioGroupItem value="full_payment" id="full_payment" />
-                              <div>
-                                <p className="font-medium">Full Payment</p>
-                                <p className="text-sm text-gray-600">Pay 100% now</p>
-                              </div>
-                            </div>
-                            <Badge variant="secondary">100%</Badge>
-                          </label>
-                        </div>
-                      </RadioGroup>
-                      {errors.paymentType && (
-                        <p className="text-sm text-red-500 mt-1">{errors.paymentType.message}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Payment Method */}
+                <div className="grid gap-8 lg:grid-cols-2 mt-8">
+                  {/* Date Selection */}
                   <div>
-                    <Label className="text-base mb-3 block">Payment Method</Label>
-                    <RadioGroup
-                      value={watchPaymentMethod}
-                      onValueChange={(value) => setValue('paymentMethod', value)}
-                    >
-                      <div className="grid gap-3">
-                        <label
-                          htmlFor="qris"
-                          className="flex items-center justify-between p-4 rounded-xl border-2 cursor-not-allowed opacity-50 border-gray-200"
-                        >
-                          <div className="flex items-center gap-3">
-                            <RadioGroupItem value="qris" id="qris" disabled />
-                            <div>
-                              <p className="font-medium">QRIS</p>
-                              <p className="text-sm text-gray-600">Scan and pay instantly</p>
-                            </div>
-                          </div>
-                          <Badge variant="outline">Coming Soon</Badge>
-                        </label>
-                        
-                        <label
-                          htmlFor="transfer"
-                          className={cn(
-                            "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all",
-                            watchPaymentMethod === 'transfer'
-                              ? "border-blue-600 bg-blue-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <RadioGroupItem value="transfer" id="transfer" />
-                            <div>
-                              <p className="font-medium">Bank Transfer</p>
-                              <p className="text-sm text-gray-600">Transfer to our bank account</p>
-                            </div>
-                          </div>
-                        </label>
-                        
-                        <label
-                          htmlFor="cash"
-                          className={cn(
-                            "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all",
-                            watchPaymentMethod === 'cash'
-                              ? "border-blue-600 bg-blue-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <RadioGroupItem value="cash" id="cash" />
-                            <div>
-                              <p className="font-medium">Cash</p>
-                              <p className="text-sm text-gray-600">Pay when you arrive</p>
-                            </div>
-                          </div>
-                        </label>
-                      </div>
-                    </RadioGroup>
-                    {errors.paymentMethod && (
-                      <p className="text-sm text-red-500 mt-1">{errors.paymentMethod.message}</p>
+                    <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4" />
+                      Select Date
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-xl">
+                      <Calendar
+                        mode="single"
+                        selected={watchDate}
+                        onSelect={(date) => setValue('bookingDate', date)}
+                        disabled={(date) => date < new Date()}
+                        className="rounded-md w-full"
+                      />
+                    </div>
+                    {errors.bookingDate && (
+                      <p className="text-sm text-red-500 mt-2">{errors.bookingDate.message}</p>
                     )}
                   </div>
 
-                  {/* Bank Account Info - Show for transfer */}
-                  {watchPaymentMethod === 'transfer' && watchPaymentType && (
+                  {/* Time Slot Selection */}
+                  {selectedService?.has_time_slots && (
                     <div>
-                      <Label className="text-base mb-3 block">Bank Account Information</Label>
-                      <div className="space-y-3">
-                        {bankAccounts.map((account, index) => (
-                          <BankAccountCard
-                            key={index}
-                            account={account}
-                            onCopy={copyToClipboard}
-                            copied={copiedAccount}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-sm text-blue-600 mt-3 flex items-center gap-2">
-                        <Sparkles className="h-4 w-4" />
+                      <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Select Time
+                      </h3>
+                      {timeSlots.length > 0 ? (
+                        <TimeSlotGrid
+                          slots={timeSlots}
+                          selected={watch('timeSlotId')}
+                          onSelect={(id) => setValue('timeSlotId', id)}
+                        />
+                      ) : watchDate ? (
+                        <div className="text-center py-12 bg-gray-50 rounded-xl">
+                          <Clock className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                          <p className="text-gray-500">No time slots available</p>
+                          <p className="text-sm text-gray-400 mt-1">Please select another date</p>
+                        </div>
+                      ) : (
+                        <div className="text-center py-12 bg-gray-50 rounded-xl">
+                          <CalendarIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                          <p className="text-gray-500">Select a date first</p>
+                        </div>
+                      )}
+                      {errors.timeSlotId && (
+                        <p className="text-sm text-red-500 mt-2">{errors.timeSlotId.message}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {watchDate && (
+                  <div className="mt-6 p-4 bg-blue-50 rounded-xl">
+                    <p className="text-sm text-center">
+                      <span className="font-medium text-blue-900">Selected Date:</span>{' '}
+                      <span className="text-blue-700">{format(watchDate, 'EEEE, dd MMMM yyyy')}</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Payment */}
+            {currentStep === 4 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Payment details</h2>
+                  <p className="text-gray-600 mt-2">Choose your preferred payment method</p>
+                </div>
+
+                {/* Payment Type */}
+                {!isSelfPhoto && (
+                  <div className="mt-8">
+                    <h3 className="text-sm font-medium text-gray-700 mb-4">Payment Type</h3>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label
+                        className={cn(
+                          "relative flex items-center p-4 rounded-xl border cursor-pointer transition-all duration-200",
+                          watchPaymentType === 'down_payment'
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          {...register('paymentType')}
+                          value="down_payment"
+                          className="sr-only"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">Down Payment</p>
+                          <p className="text-sm text-gray-500">Pay 50% now, 50% later</p>
+                        </div>
+                        <Badge variant="secondary" className="ml-3">50%</Badge>
+                        {watchPaymentType === 'down_payment' && (
+                          <div className="absolute top-4 right-4 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                            <Check className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </label>
+                      
+                      <label
+                        className={cn(
+                          "relative flex items-center p-4 rounded-xl border cursor-pointer transition-all duration-200",
+                          watchPaymentType === 'full_payment'
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          {...register('paymentType')}
+                          value="full_payment"
+                          className="sr-only"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">Full Payment</p>
+                          <p className="text-sm text-gray-500">Pay 100% now</p>
+                        </div>
+                        <Badge variant="secondary" className="ml-3">100%</Badge>
+                        {watchPaymentType === 'full_payment' && (
+                          <div className="absolute top-4 right-4 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                            <Check className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                    {errors.paymentType && (
+                      <p className="text-sm text-red-500 mt-2">{errors.paymentType.message}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Payment Method */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-4">Payment Method</h3>
+                  <div className="grid gap-3">
+                    <PaymentMethodCard
+                      method="qris"
+                      selected={watchPaymentMethod === 'qris'}
+                      onSelect={(method) => setValue('paymentMethod', method)}
+                      disabled
+                    />
+                    <PaymentMethodCard
+                      method="transfer"
+                      selected={watchPaymentMethod === 'transfer'}
+                      onSelect={(method) => setValue('paymentMethod', method)}
+                    />
+                    <PaymentMethodCard
+                      method="cash"
+                      selected={watchPaymentMethod === 'cash'}
+                      onSelect={(method) => setValue('paymentMethod', method)}
+                    />
+                  </div>
+                  {errors.paymentMethod && (
+                    <p className="text-sm text-red-500 mt-2">{errors.paymentMethod.message}</p>
+                  )}
+                </div>
+
+                {/* Bank Account Info */}
+                {watchPaymentMethod === 'transfer' && watchPaymentType && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-700">Bank Account Information</h3>
+                    <div className="space-y-3">
+                      {bankAccounts.map((account) => (
+                        <div
+                          key={account.bank}
+                          className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold",
+                              account.bank === 'BCA' ? "bg-blue-600" :
+                              account.bank === 'BRI' ? "bg-blue-500" : "bg-purple-600"
+                            )}>
+                              {account.bank}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{account.name}</p>
+                              <p className="text-sm text-gray-600 font-mono">{account.number}</p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(account.number, account.bank)}
+                            className="text-gray-600 hover:text-gray-900"
+                          >
+                            {copiedAccount === account.bank ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                      <p className="text-sm text-amber-800">
                         Please send payment proof via WhatsApp after transfer
                       </p>
                     </div>
-                  )}
-
-                  {/* Payment Proof Upload */}
-                  {watchPaymentMethod === 'transfer' && (
-                    <div>
-                      <Label htmlFor="paymentProof" className="text-base mb-3 block">
-                        Payment Proof *
-                      </Label>
-                      <div className="relative">
-                        <input
-                          id="paymentProof"
-                          type="file"
-                          {...register('paymentProof')}
-                          accept="image/*"
-                          className="hidden"
-                        />
-                        <label
-                          htmlFor="paymentProof"
-                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-gray-400 transition-colors"
-                        >
-                          {paymentProofPreview ? (
-                            <div className="relative w-full h-full">
-                              <img
-                                src={paymentProofPreview}
-                                alt="Payment proof preview"
-                                className="w-full h-full object-cover rounded-lg"
-                              />
-                              <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-lg">
-                                <p className="text-white text-sm">Click to change</p>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                              <p className="text-sm text-gray-600">Click to upload payment proof</p>
-                              <p className="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</p>
-                            </>
-                          )}
-                        </label>
-                      </div>
-                      {errors.paymentProof && (
-                        <p className="text-sm text-red-500 mt-1">{errors.paymentProof.message}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Cash Payment Notice */}
-                  {watchPaymentMethod === 'cash' && (
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                      <p className="text-sm text-yellow-800">
-                        <strong>Cash Payment:</strong> Please bring the exact amount on your session day.
-                        We'll provide a receipt upon payment.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Price Summary */}
-                  {totalPrice.paymentAmount > 0 && (
-                    <Card className="bg-gradient-to-r from-blue-50 to-sky-50 border-blue-200">
-                      <CardContent className="pt-6">
-                        <h4 className="font-semibold text-gray-900 mb-4">Payment Summary</h4>
-                        
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Package Price</span>
-                            <span className="font-medium">Rp {formatPrice(totalPrice.originalPrice)}</span>
-                          </div>
-                          
-                          {totalPrice.discountPercentage > 0 && (
-                            <>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-green-600">Discount ({totalPrice.discountPercentage}%)</span>
-                                <span className="font-medium text-green-600">
-                                  -Rp {formatPrice(totalPrice.originalPrice - totalPrice.discountedPrice)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between text-sm pt-2 border-t">
-                                <span className="text-gray-600">Subtotal</span>
-                                <span className="font-medium">Rp {formatPrice(totalPrice.discountedPrice)}</span>
-                              </div>
-                            </>
-                          )}
-                          
-                          <div className="border-t pt-3">
-                            {totalPrice.paymentType === 'down_payment' ? (
-                              <>
-                                <div className="flex justify-between">
-                                  <span className="font-semibold">Down Payment (50%)</span>
-                                  <span className="font-bold text-lg text-blue-600">
-                                    Rp {formatPrice(totalPrice.paymentAmount)}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between text-sm text-gray-600 mt-1">
-                                  <span>Remaining balance</span>
-                                  <span>Rp {formatPrice(totalPrice.discountedPrice - totalPrice.paymentAmount)}</span>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="flex justify-between">
-                                <span className="font-semibold">Total Payment</span>
-                                <span className="font-bold text-lg text-blue-600">
-                                  Rp {formatPrice(totalPrice.paymentAmount)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
-
-              {/* Step 5: Review */}
-              {currentStep === 5 && (
-                <div className="space-y-6 animate-in slide-in-from-right duration-300">
-                  <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Sparkles className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-semibold">Review Your Booking</h3>
-                    <p className="text-gray-600 mt-2">Please check all details before confirming</p>
                   </div>
+                )}
 
-                  {/* Review Cards */}
-                  <div className="space-y-4">
-                    {/* Personal Info Review */}
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          Personal Information
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Name</span>
-                          <span className="text-sm font-medium">{watch('customerName')}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Phone</span>
-                          <span className="text-sm font-medium">{watch('phoneNumber')}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Service Review */}
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Camera className="h-4 w-4" />
-                          Service Details
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Service</span>
-                          <span className="text-sm font-medium">{selectedService?.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Package</span>
-                          <span className="text-sm font-medium">
-                            {packages.find(p => p.id.toString() === watchPackage)?.package_name}
-                          </span>
-                        </div>
-                        {isGraduationPhotography && (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Faculty</span>
-                              <span className="text-sm font-medium">{watch('faculty')}</span>
+                {/* Payment Proof Upload */}
+                {watchPaymentMethod === 'transfer' && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-4">
+                      Payment Proof <span className="text-red-500">*</span>
+                    </h3>
+                    <div className="relative">
+                      <input
+                        id="paymentProof"
+                        type="file"
+                        {...register('paymentProof')}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="paymentProof"
+                        className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-gray-400 transition-colors bg-gray-50"
+                      >
+                        {paymentProofPreview ? (
+                          <div className="relative w-full h-full p-2">
+                            <img
+                              src={paymentProofPreview}
+                              alt="Payment proof"
+                              className="w-full h-full object-contain rounded-lg"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-lg opacity-0 hover:opacity-100 transition-opacity">
+                              <p className="text-white text-sm font-medium">Click to change</p>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">University</span>
-                              <span className="text-sm font-medium">{watch('university')}</span>
-                            </div>
-                          </>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    {/* Schedule Review */}
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <CalendarDays className="h-4 w-4" />
-                          Schedule
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Date</span>
-                          <span className="text-sm font-medium">
-                            {watchDate && format(watchDate, 'dd MMMM yyyy')}
-                          </span>
-                        </div>
-                        {watch('timeSlotId') && (
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Time</span>
-                            <span className="text-sm font-medium">
-                              {timeSlots.find(s => s.id.toString() === watch('timeSlotId'))?.start_time} - 
-                              {timeSlots.find(s => s.id.toString() === watch('timeSlotId'))?.end_time}
-                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                            <p className="text-sm text-gray-600">Click to upload payment proof</p>
+                            <p className="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</p>
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
-
-                    {/* Payment Review */}
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" />
-                          Payment Information
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Payment Type</span>
-                          <span className="text-sm font-medium">
-                            {watchPaymentType === 'down_payment' ? 'Down Payment (50%)' : 'Full Payment'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Payment Method</span>
-                          <span className="text-sm font-medium capitalize">{watchPaymentMethod}</span>
-                        </div>
-                        <div className="flex justify-between pt-2 border-t">
-                          <span className="font-medium">Total to Pay</span>
-                          <span className="font-bold text-lg text-blue-600">
-                            Rp {formatPrice(totalPrice.paymentAmount)}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      </label>
+                    </div>
+                    {errors.paymentProof && (
+                      <p className="text-sm text-red-500 mt-2">{errors.paymentProof.message}</p>
+                    )}
                   </div>
+                )}
 
-                  {/* Terms & Conditions */}
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-xs text-gray-600">
-                      By confirming this booking, you agree to our terms and conditions. 
-                      We will contact you via WhatsApp to confirm your booking within 24 hours.
+                {/* Cash Payment Notice */}
+                {watchPaymentMethod === 'cash' && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-sm text-amber-800">
+                      <strong>Cash Payment:</strong> Please bring the exact amount on your session day. 
+                      We'll provide a receipt upon payment.
                     </p>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Navigation Buttons */}
-              <div className="flex justify-between pt-8">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleBack}
-                  disabled={currentStep === 1}
-                  className="gap-2"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Back
-                </Button>
-                
-                {currentStep < steps.length ? (
-                  <Button
-                    type="button"
-                    onClick={handleNext}
-                    className="gap-2 bg-blue-600 hover:bg-blue-700"
-                  >
-                    Next
-                    <ChevronLeft className="h-4 w-4 rotate-180" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="gap-2 bg-blue-600 hover:bg-blue-700"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4" />
-                        Confirm Booking
-                      </>
-                    )}
-                  </Button>
+                {/* Payment Summary */}
+                {totalPrice.paymentAmount > 0 && (
+                  <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
+                    <h3 className="font-semibold text-gray-900 mb-4">Payment Summary</h3>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Package Price</span>
+                        <span className="font-medium">Rp {formatPrice(totalPrice.originalPrice)}</span>
+                      </div>
+                      
+                      {totalPrice.discountPercentage > 0 && (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-emerald-600">Discount ({totalPrice.discountPercentage}%)</span>
+                            <span className="font-medium text-emerald-600">
+                              -Rp {formatPrice(totalPrice.originalPrice - totalPrice.discountedPrice)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm pt-3 border-t">
+                            <span className="text-gray-600">Subtotal</span>
+                            <span className="font-medium">Rp {formatPrice(totalPrice.discountedPrice)}</span>
+                          </div>
+                        </>
+                      )}
+                      
+                      <div className="flex justify-between pt-3 border-t">
+                        {totalPrice.paymentType === 'down_payment' ? (
+                          <>
+                            <div className="space-y-1">
+                              <p className="font-semibold text-gray-900">Down Payment (50%)</p>
+                              <p className="text-xs text-gray-500">Remaining: Rp {formatPrice(totalPrice.discountedPrice - totalPrice.paymentAmount)}</p>
+                            </div>
+                            <p className="text-xl font-bold text-blue-600">
+                              Rp {formatPrice(totalPrice.paymentAmount)}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-gray-900">Total Payment</p>
+                            <p className="text-xl font-bold text-blue-600">
+                              Rp {formatPrice(totalPrice.paymentAmount)}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            )}
 
-        {/* Floating Help Button */}
-        <div className="fixed bottom-6 right-6">
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full shadow-lg h-12 w-12"
-            onClick={() => window.open('https://wa.me/6282371097483', '_blank')}
-          >
-            <Phone className="h-5 w-5" />
-          </Button>
+            {/* Navigation */}
+            <div className="flex justify-between mt-6 sm:mt-8 pt-4 sm:pt-6 border-t">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleBack}
+                disabled={currentStep === 1}
+                className="gap-1.5 sm:gap-2 text-gray-600 hover:text-gray-900 text-sm sm:text-base px-3 sm:px-4"
+              >
+                <ChevronLeft className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                Back
+              </Button>
+              
+              <Button
+                type="button"
+                onClick={handleNext}
+                disabled={currentStep === steps && loading}
+                className="gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 rounded-lg sm:rounded-xl shadow-lg shadow-blue-200 text-sm sm:text-base"
+              >
+                {currentStep === steps ? (
+                  loading ? (
+                    <>
+                      <div className="h-3.5 sm:h-4 w-3.5 sm:w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Confirm Booking
+                      <Check className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                    </>
+                  )
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
