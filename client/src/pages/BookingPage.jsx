@@ -138,7 +138,7 @@ const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, s
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium text-gray-900">{pkg.package_name}</p>
-                    <p className="text-sm text-gray-500 mt-0.5 w-36">{pkg.description}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{pkg.description}</p>
                   </div>
                   <div className="text-right ml-4">
                     {service.discount_percentage > 0 ? (
@@ -151,7 +151,7 @@ const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, s
                         </p>
                       </div>
                     ) : (
-                      <p className="text-l font-bold text-gray-900">
+                      <p className="text-lg font-bold text-gray-900">
                         Rp {formatPrice(pkg.price)}
                       </p>
                     )}
@@ -225,7 +225,7 @@ const ModernInput = ({ label, icon: Icon, error, required, ...props }) => {
 };
 
 // Payment Method Card
-const PaymentMethodCard = ({ method, selected, onSelect, disabled = false }) => {
+const PaymentMethodCard = ({ method, selected, onSelect }) => {
   const icons = {
     qris: '🔲',
     transfer: '🏦',
@@ -250,8 +250,7 @@ const PaymentMethodCard = ({ method, selected, onSelect, disabled = false }) => 
         "relative flex items-center p-4 rounded-xl border cursor-pointer transition-all duration-200",
         selected
           ? "border-blue-500 bg-blue-50"
-          : "border-gray-200 hover:border-gray-300 bg-white",
-        disabled && "opacity-50 cursor-not-allowed"
+          : "border-gray-200 hover:border-gray-300 bg-white"
       )}
     >
       <input
@@ -259,22 +258,16 @@ const PaymentMethodCard = ({ method, selected, onSelect, disabled = false }) => 
         name="paymentMethod"
         value={method}
         className="sr-only"
-        onChange={() => !disabled && onSelect(method)}
-        disabled={disabled}
+        onChange={() => onSelect(method)}
       />
       <div className="flex items-center flex-1">
         <span className="text-2xl mr-3">{icons[method]}</span>
         <div>
-          <p className="font-medium text-gray-900">
-            {labels[method]}
-            {method === 'qris' && (
-              <Badge variant="outline" className="ml-2 text-xs">Coming Soon</Badge>
-            )}
-          </p>
+          <p className="font-medium text-gray-900">{labels[method]}</p>
           <p className="text-sm text-gray-500">{descriptions[method]}</p>
         </div>
       </div>
-      {selected && !disabled && (
+      {selected && (
         <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
           <Check className="h-3 w-3 text-white" />
         </div>
@@ -555,42 +548,43 @@ export default function BookingPage() {
     }
   };
 
-  const handleNext = async () => {
-    let fieldsToValidate = [];
-    
-    switch (currentStep) {
-      case 1:
-        fieldsToValidate = ['customerName', 'phoneNumber'];
-        break;
-      case 2:
-        fieldsToValidate = ['serviceId', 'packageId'];
-        if (isGraduationPhotography) {
-          fieldsToValidate.push('faculty', 'university');
-        }
-        break;
-      case 3:
-        fieldsToValidate = ['bookingDate'];
-        if (selectedService?.has_time_slots) {
-          fieldsToValidate.push('timeSlotId');
-        }
-        break;
-      case 4:
-        fieldsToValidate = ['paymentType', 'paymentMethod'];
-        if (watch('paymentMethod') === 'transfer') {
-          fieldsToValidate.push('paymentProof');
-        }
-        break;
-    }
-    
-    const isValid = await trigger(fieldsToValidate);
-    if (isValid) {
-      if (currentStep === steps) {
-        handleSubmit(onSubmit)();
-      } else {
-        setCurrentStep(prev => Math.min(prev + 1, steps));
+const handleNext = async () => {
+  let fieldsToValidate = [];
+  
+  switch (currentStep) {
+    case 1:
+      fieldsToValidate = ['customerName', 'phoneNumber'];
+      break;
+    case 2:
+      fieldsToValidate = ['serviceId', 'packageId'];
+      if (isGraduationPhotography) {
+        fieldsToValidate.push('faculty', 'university');
       }
+      break;
+    case 3:
+      fieldsToValidate = ['bookingDate'];
+      if (selectedService?.has_time_slots) {
+        fieldsToValidate.push('timeSlotId');
+      }
+      break;
+    case 4:
+      fieldsToValidate = ['paymentType', 'paymentMethod'];
+      // Payment proof required for QRIS and transfer
+      if (watch('paymentMethod') === 'transfer' || watch('paymentMethod') === 'qris') {
+        fieldsToValidate.push('paymentProof');
+      }
+      break;
+  }
+  
+  const isValid = await trigger(fieldsToValidate);
+  if (isValid) {
+    if (currentStep === steps) {
+      handleSubmit(onSubmit)();
+    } else {
+      setCurrentStep(prev => Math.min(prev + 1, steps));
     }
-  };
+  }
+};
 
   const handleBack = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -598,51 +592,52 @@ export default function BookingPage() {
 
   const onSubmit = async (data) => {
     setLoading(true);
-    
-    try {
-      const formData = new FormData();
-      
-      formData.append('customerName', data.customerName);
-      formData.append('phoneNumber', data.phoneNumber);
-      formData.append('serviceId', data.serviceId);
-      formData.append('packageId', data.packageId);
-      formData.append('bookingDate', format(data.bookingDate, 'yyyy-MM-dd'));
-      formData.append('paymentType', data.paymentType);
-      formData.append('paymentMethod', data.paymentMethod);
-      
-      if (data.timeSlotId) formData.append('timeSlotId', data.timeSlotId);
-      if (data.faculty) formData.append('faculty', data.faculty);
-      if (data.university) formData.append('university', data.university);
-      if (data.selectedBank) formData.append('selectedBank', data.selectedBank);
-      
-      if (data.paymentMethod === 'transfer' && data.paymentProof && data.paymentProof[0]) {
-        formData.append('paymentProof', data.paymentProof[0]);
-      }
+  
+      try {
+        const formData = new FormData();
+        
+        formData.append('customerName', data.customerName);
+        formData.append('phoneNumber', data.phoneNumber);
+        formData.append('serviceId', data.serviceId);
+        formData.append('packageId', data.packageId);
+        formData.append('bookingDate', format(data.bookingDate, 'yyyy-MM-dd'));
+        formData.append('paymentType', data.paymentType);
+        formData.append('paymentMethod', data.paymentMethod);
+        
+        if (data.timeSlotId) formData.append('timeSlotId', data.timeSlotId);
+        if (data.faculty) formData.append('faculty', data.faculty);
+        if (data.university) formData.append('university', data.university);
+        if (data.selectedBank) formData.append('selectedBank', data.selectedBank);
+        
+        // Payment proof required for QRIS and transfer
+        if ((data.paymentMethod === 'transfer' || data.paymentMethod === 'qris') && data.paymentProof && data.paymentProof[0]) {
+          formData.append('paymentProof', data.paymentProof[0]);
+        }
 
-      const response = await bookingService.createBooking(formData);
-      
-      if (response.success) {
-        const details = {
-          bookingCode: response.bookingCode,
-          customerName: data.customerName,
-          serviceName: selectedService?.name,
-          packageName: packages.find(p => p.id.toString() === data.packageId)?.package_name,
-          totalAmount: totalPrice.paymentAmount
-        };
-        setBookingDetails(details);
-        setShowThankYou(true);
-      }
-    } catch (error) {
-      console.error('Booking error:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create booking',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+        const response = await bookingService.createBooking(formData);
+        
+        if (response.success) {
+          const details = {
+            bookingCode: response.bookingCode,
+            customerName: data.customerName,
+            serviceName: selectedService?.name,
+            packageName: packages.find(p => p.id.toString() === data.packageId)?.package_name,
+            totalAmount: totalPrice.paymentAmount
+          };
+          setBookingDetails(details);
+          setShowThankYou(true);
+        }
+        } catch (error) {
+          console.error('Booking error:', error);
+          toast({
+            title: 'Error',
+            description: error.message || 'Failed to create booking',
+            variant: 'destructive',
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
 
   if (showThankYou) {
     return <ThankYouPage bookingDetails={bookingDetails} />;
@@ -930,7 +925,6 @@ export default function BookingPage() {
                       method="qris"
                       selected={watchPaymentMethod === 'qris'}
                       onSelect={(method) => setValue('paymentMethod', method)}
-                      disabled
                     />
                     <PaymentMethodCard
                       method="transfer"
@@ -947,6 +941,92 @@ export default function BookingPage() {
                     <p className="text-sm text-red-500 mt-2">{errors.paymentMethod.message}</p>
                   )}
                 </div>
+
+                {/* QRIS Payment Info */}
+                {watchPaymentMethod === 'qris' && watchPaymentType && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-700">QRIS Payment</h3>
+                    
+                    <div className="bg-white p-6 rounded-xl border border-gray-200">
+                      <div className="text-center">
+                        {/* QRIS Image */}
+                        <div className="inline-block p-4 bg-gray-50 rounded-xl mb-4">
+                          <img 
+                            src="/public/qris/thirtys-qris.jpeg" // Path to your QRIS image
+                            alt="QRIS Payment Code"
+                            className="w-48 h-48 object-contain"
+                          />
+                        </div>
+                        
+                        <p className="text-sm text-gray-600 mb-2">Scan with any e-wallet or mobile banking app</p>
+                        <p className="text-xs text-gray-500">GoPay, OVO, DANA, LinkAja, ShopeePay, etc.</p>
+                        
+                        {/* Payment Amount Display */}
+                        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                          <p className="text-sm text-gray-600 mb-1">Amount to pay</p>
+                          <p className="text-2xl font-bold text-blue-600">
+                            Rp {formatPrice(totalPrice.paymentAmount)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Payment Instructions */}
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                      <p className="text-sm text-amber-800 font-medium mb-2">Payment Instructions:</p>
+                      <ol className="text-sm text-amber-700 space-y-1 list-decimal list-inside">
+                        <li>Open your e-wallet or mobile banking app</li>
+                        <li>Scan the QR code above</li>
+                        <li>Verify the amount matches: Rp {formatPrice(totalPrice.paymentAmount)}</li>
+                        <li>Complete the payment</li>
+                        <li>Screenshot your payment confirmation</li>
+                        <li>Upload the screenshot below</li>
+                      </ol>
+                    </div>
+                    
+                    {/* Payment Proof Upload for QRIS */}
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-700 mb-4">
+                        Payment Confirmation <span className="text-red-500">*</span>
+                      </h3>
+                      <div className="relative">
+                        <input
+                          id="paymentProof"
+                          type="file"
+                          {...register('paymentProof')}
+                          accept="image/*"
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="paymentProof"
+                          className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-gray-400 transition-colors bg-gray-50"
+                        >
+                          {paymentProofPreview ? (
+                            <div className="relative w-full h-full p-2">
+                              <img
+                                src={paymentProofPreview}
+                                alt="Payment proof"
+                                className="w-full h-full object-contain rounded-lg"
+                              />
+                              <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-lg opacity-0 hover:opacity-100 transition-opacity">
+                                <p className="text-white text-sm font-medium">Click to change</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                              <p className="text-sm text-gray-600">Upload payment screenshot</p>
+                              <p className="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</p>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+                      {errors.paymentProof && (
+                        <p className="text-sm text-red-500 mt-2">{errors.paymentProof.message}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Bank Account Info */}
                 {watchPaymentMethod === 'transfer' && watchPaymentType && (

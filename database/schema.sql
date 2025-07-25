@@ -169,3 +169,184 @@ CREATE TABLE time_slot_bookings (
 -- Set capacity untuk existing slots
 UPDATE time_slots SET max_capacity = 3 WHERE service_id = 1; -- Self Photo
 UPDATE time_slots SET max_capacity = 2 WHERE service_id = 2; -- Graduation
+
+-- Add payment_method and selected_bank columns to bookings table
+ALTER TABLE bookings 
+ADD COLUMN payment_method ENUM('qris', 'transfer', 'cash') DEFAULT 'transfer' AFTER payment_type,
+ADD COLUMN selected_bank VARCHAR(50) NULL AFTER payment_method;
+
+-- Update existing records to have default payment_method
+UPDATE bookings 
+SET payment_method = 'transfer' 
+WHERE payment_method IS NULL;
+
+
+
+
+-- Run this migration in Railway MySQL console
+
+-- Check if columns already exist before adding
+SET @dbname = DATABASE();
+SET @tablename = 'bookings';
+SET @columnname1 = 'payment_method';
+SET @columnname2 = 'selected_bank';
+
+-- Add payment_method column if not exists
+SET @preparedStatement = (
+  SELECT IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+     WHERE TABLE_SCHEMA = @dbname 
+     AND TABLE_NAME = @tablename 
+     AND COLUMN_NAME = @columnname1) > 0,
+    'SELECT 1',
+    CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN payment_method ENUM(''qris'', ''transfer'', ''cash'') DEFAULT ''transfer'' AFTER payment_type')
+  )
+);
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+-- Add selected_bank column if not exists
+SET @preparedStatement = (
+  SELECT IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+     WHERE TABLE_SCHEMA = @dbname 
+     AND TABLE_NAME = @tablename 
+     AND COLUMN_NAME = @columnname2) > 0,
+    'SELECT 1',
+    CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN selected_bank VARCHAR(50) NULL AFTER payment_method')
+  )
+);
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+-- Update existing records to have default payment_method
+UPDATE bookings 
+SET payment_method = 'transfer' 
+WHERE payment_method IS NULL;
+
+-- Create time_slot_bookings table if not exists
+CREATE TABLE IF NOT EXISTS time_slot_bookings (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  time_slot_id INT NOT NULL,
+  booking_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (time_slot_id) REFERENCES time_slots(id) ON DELETE CASCADE,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_booking (time_slot_id, booking_id)
+);
+
+-- Update max_capacity in time_slots if column doesn't exist
+SET @preparedStatement = (
+  SELECT IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+     WHERE TABLE_SCHEMA = @dbname 
+     AND TABLE_NAME = 'time_slots' 
+     AND COLUMN_NAME = 'max_capacity') > 0,
+    'SELECT 1',
+    'ALTER TABLE time_slots ADD COLUMN max_capacity INT DEFAULT 1 AFTER end_time'
+  )
+);
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+
+
+
+
+
+
+
+
+
+
+-- Add display_code column to bookings table
+ALTER TABLE bookings 
+ADD COLUMN display_code VARCHAR(20) NULL AFTER booking_code;
+
+-- Create index for display_code for faster searches
+CREATE INDEX idx_display_code ON bookings(display_code);
+
+-- Update existing bookings with THIRTY format
+UPDATE bookings 
+SET display_code = CONCAT('THIRTY', LPAD(id, 3, '0'))
+WHERE display_code IS NULL;
+
+-- Create trigger to auto-generate display_code for new bookings
+DELIMITER //
+CREATE TRIGGER generate_display_code 
+BEFORE INSERT ON bookings
+FOR EACH ROW
+BEGIN
+    -- Get the next AUTO_INCREMENT value
+    DECLARE next_id INT;
+    SELECT AUTO_INCREMENT INTO next_id
+    FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'bookings';
+    
+    -- Set display_code
+    SET NEW.display_code = CONCAT('THIRTY', LPAD(next_id, 3, '0'));
+END//
+DELIMITER ;
+
+-- Note: If you want to reset the numbering system in the future, you can run:
+-- UPDATE bookings SET display_code = CONCAT('THIRTY', LPAD(id, 3, '0'));
+
+
+
+
+
+
+
+CREATE OR REPLACE VIEW customer_summary AS
+SELECT 
+  b.customer_name,
+  b.phone_number,
+  COUNT(DISTINCT b.id) as total_bookings,
+  SUM(b.total_price) as total_spent,
+  MIN(b.created_at) as first_booking,
+  MAX(b.created_at) as last_booking,
+  COUNT(CASE WHEN b.status = 'completed' THEN 1 END) as completed_bookings,
+  COUNT(CASE WHEN b.status = 'pending' THEN 1 END) as pending_bookings,
+  COUNT(CASE WHEN b.status = 'confirmed' THEN 1 END) as confirmed_bookings,
+  COUNT(CASE WHEN b.status = 'cancelled' THEN 1 END) as cancelled_bookings,
+  GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ') as used_services
+FROM bookings b
+JOIN services s ON b.service_id = s.id
+GROUP BY b.customer_name, b.phone_number
+ORDER BY total_spent DESC;
+
+-- Optional: Tabel untuk customer notes/tags (jika diperlukan di masa depan)
+CREATE TABLE IF NOT EXISTS customer_notes (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  customer_phone VARCHAR(20) NOT NULL,
+  customer_name VARCHAR(100) NOT NULL,
+  note TEXT,
+  tag VARCHAR(50),
+  created_by INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES admins(id),
+  INDEX idx_customer_phone (customer_phone),
+  INDEX idx_customer_name (customer_name)
+);
+
+-- Index untuk optimasi query customers
+CREATE INDEX IF NOT EXISTS idx_bookings_customer_name ON bookings(customer_name);
+CREATE INDEX IF NOT EXISTS idx_bookings_phone_number ON bookings(phone_number);
+CREATE INDEX IF NOT EXISTS idx_bookings_customer_combo ON bookings(customer_name, phone_number);
+
+
+-- 1. Drop customer_summary view
+DROP VIEW IF EXISTS customer_summary;
+
+-- 2. Drop customer_notes table (jika ada)
+DROP TABLE IF EXISTS customer_notes;
+
+-- 3. Drop indexes yang dibuat untuk customers (jika ada)
+DROP INDEX IF EXISTS idx_bookings_customer_name ON bookings;
+DROP INDEX IF EXISTS idx_bookings_phone_number ON bookings;
+DROP INDEX IF EXISTS idx_bookings_customer_combo ON bookings;

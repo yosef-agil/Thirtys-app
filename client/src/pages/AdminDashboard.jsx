@@ -20,13 +20,21 @@ import {
   FileSpreadsheet,
   Calendar,
   Filter,
-  X
+  X,
+  TrendingUp,
+  Users,
+  Clock,
+  DollarSign,
+  Activity,
+  Package,
+  ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import BookingTable from '../components/BookingTable';
 import ServiceManager from '../components/ServiceManager';
 import api from '../services/api';
 import * as XLSX from 'xlsx';
+import { cn } from '@/lib/utils';
 
 // Utility function untuk format harga
 const formatPrice = (price) => {
@@ -47,6 +55,70 @@ const SERVICES = [
   { id: 6, name: 'Prewedding Videography' },
   { id: 7, name: 'Photo Product' }
 ];
+
+// Modern Stats Card Component
+const StatsCard = ({ title, value, subtitle, icon: Icon, trend }) => {
+  return (
+    <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-all duration-200">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-gray-600">{title}</p>
+            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            {subtitle && (
+              <p className="text-xs text-gray-500">{subtitle}</p>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="p-3 rounded-xl bg-gray-50">
+              <Icon className="h-5 w-5 text-gray-600" />
+            </div>
+            {trend && (
+              <div className="flex items-center gap-1 text-xs">
+                <TrendingUp className="h-3 w-3 text-green-600" />
+                <span className="text-green-600 font-medium">{trend}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Quick Actions Component
+const QuickActions = ({ selectedCount, onBulkAction }) => {
+  if (selectedCount === 0) return null;
+  
+  return (
+    <div className="animate-in slide-in-from-bottom duration-300 fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 flex items-center gap-3">
+        <span className="text-sm text-gray-600 font-medium">
+          {selectedCount} items selected
+        </span>
+        <div className="h-4 w-px bg-gray-300" />
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onBulkAction('confirm')}
+          className="gap-2"
+        >
+          <CheckCircle className="h-4 w-4" />
+          Confirm All
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onBulkAction('delete')}
+          className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete All
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState([]);
@@ -345,8 +417,10 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-200 animate-pulse">
+            <Activity className="h-10 w-10 text-white" />
+          </div>
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -361,92 +435,168 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto p-6">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <Button variant="outline" onClick={handleLogout}>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              Thirtys Admin
+            </h1>
+            <Button 
+              variant="outline" 
+              onClick={handleLogout}
+              className="rounded-xl hover:bg-gray-100 transition-all duration-200"
+            >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
           </div>
-          
-          <div className="text-center py-12">
-            <p className="text-red-600 mb-4 text-lg">{error}</p>
-            <Button onClick={loadDashboardData}>Retry Loading Data</Button>
-          </div>
+
+          <Card className="max-w-md mx-auto mt-20">
+            <CardContent className="pt-6 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <X className="h-8 w-8 text-red-600" />
+              </div>
+              <p className="text-red-600 mb-4 text-lg font-medium">{error}</p>
+              <Button 
+                onClick={loadDashboardData}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+              >
+                Retry Loading Data
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
+  // Calculate additional stats
+  const completedBookings = bookings.filter(b => b.status === 'completed').length;
+  const totalCustomers = new Set(bookings.map(b => b.phone_number)).size;
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              Thirtys Admin
+            </h1>
+            <p className="text-gray-600 mt-1">Manage your bookings and services</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500">
+              {format(new Date(), 'EEEE, dd MMMM yyyy')}
+            </span>
+            <Button 
+              variant="outline" 
+              onClick={handleLogout}
+              className="rounded-xl hover:bg-gray-100 transition-all duration-200"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Error Banner */}
         {error && bookings.length > 0 && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
             <p className="text-red-600">{error}</p>
-            <Button variant="outline" size="sm" onClick={loadDashboardData} className="mt-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={loadDashboardData} 
+              className="rounded-lg"
+            >
               Retry
             </Button>
           </div>
         )}
 
         {/* Stats Cards */}
-        <div className="grid gap-6 mb-8 md:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>Total Bookings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{stats.monthlyBookingsCount}</p>
-              <p className="text-sm text-gray-500">This month</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Bookings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{stats.pendingBookings}</p>
-              <p className="text-sm text-gray-500">Awaiting confirmation</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Monthly Revenue</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">
-                Rp {formatPrice(stats.monthlyRevenue || 0)}
-              </p>
-              <p className="text-sm text-gray-500">This month</p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-4 mb-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <StatsCard
+            title="Monthly Revenue"
+            value={`Rp ${formatPrice(stats.monthlyRevenue || 0)}`}
+            subtitle="This month"
+            icon={DollarSign}
+            trend="+12%"
+          />
+          <StatsCard
+            title="Total Bookings"
+            value={stats.monthlyBookingsCount || 0}
+            subtitle="This month"
+            icon={Activity}
+            trend="+8%"
+          />
+          <StatsCard
+            title="Pending Bookings"
+            value={stats.pendingBookings || 0}
+            subtitle="Awaiting confirmation"
+            icon={Clock}
+          />
+          <StatsCard
+            title="Total Customers"
+            value={totalCustomers}
+            subtitle="Unique customers"
+            icon={Users}
+          />
         </div>
 
+        {/* Top Services */}
+        {stats.serviceStats && stats.serviceStats.length > 0 && stats.serviceStats.some(s => s.service_name) && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Popular Services</h2>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {stats.serviceStats
+                .filter(service => service.service_name && service.booking_count > 0)
+                .slice(0, 3)
+                .map((service, index) => (
+                  <Card key={index} className="hover:shadow-md transition-all duration-200 border-0 shadow-sm">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">{service.service_name}</p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {service.booking_count} bookings
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">Revenue</p>
+                          <p className="font-semibold text-blue-600">
+                            Rp {formatPrice(service.total_revenue || 0)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+              ))}
+            </div>
+          </div>
+        )}
+        
         {/* Tabs */}
-        <Tabs defaultValue="bookings">
-          <TabsList className="mb-4">
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="services">Services</TabsTrigger>
+        <Tabs defaultValue="bookings" className="space-y-4">
+          <TabsList className="bg-white border border-gray-200 p-1 rounded-xl">
+            <TabsTrigger 
+              value="bookings" 
+              className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            >
+              Bookings
+            </TabsTrigger>
+            <TabsTrigger 
+              value="services"
+              className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            >
+              Services
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="bookings">
-            <Card>
-              <CardHeader>
+          <TabsContent value="bookings" className="space-y-4">
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-4">
                 <div className="space-y-4">
                   <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                    <CardTitle>Recent Bookings</CardTitle>
+                    <CardTitle className="text-xl">Recent Bookings</CardTitle>
                     
                     {/* Export Buttons */}
                     <div className="flex gap-2">
@@ -455,38 +605,40 @@ export default function AdminDashboard() {
                         size="sm"
                         onClick={exportToExcel}
                         disabled={filteredBookings.length === 0}
+                        className="rounded-lg hover:bg-gray-100"
                       >
                         <FileSpreadsheet className="h-4 w-4 mr-2" />
-                        Export Excel
+                        Excel
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={exportToCSV}
                         disabled={filteredBookings.length === 0}
+                        className="rounded-lg hover:bg-gray-100"
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        Export CSV
+                        CSV
                       </Button>
                     </div>
                   </div>
                   
                   {/* Filters Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                     {/* Search Bar */}
                     <div className="relative lg:col-span-2">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         placeholder="Search bookings..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-8"
+                        className="pl-10 h-11 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       />
                     </div>
                     
                     {/* Service Filter */}
                     <Select value={selectedService} onValueChange={setSelectedService}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 rounded-xl border-gray-200">
                         <SelectValue placeholder="All Services" />
                       </SelectTrigger>
                       <SelectContent>
@@ -501,7 +653,7 @@ export default function AdminDashboard() {
                     
                     {/* Status Filter */}
                     <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 rounded-xl border-gray-200">
                         <SelectValue placeholder="All Status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -515,12 +667,12 @@ export default function AdminDashboard() {
                     
                     {/* Month Filter */}
                     <div className="relative">
-                      <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
                       <Input
                         type="month"
                         value={selectedMonth}
                         onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="pl-8"
+                        className="pl-10 h-11 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       />
                     </div>
                   </div>
@@ -528,38 +680,15 @@ export default function AdminDashboard() {
                   {/* Active Filters & Clear Button */}
                   {hasActiveFilters && (
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">Active filters:</span>
+                      <span className="text-sm text-gray-600">Active filters</span>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={clearFilters}
-                        className="h-7"
+                        className="h-7 rounded-lg hover:bg-gray-100"
                       >
                         <X className="h-3 w-3 mr-1" />
-                        Clear filters
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {/* Quick Actions */}
-                  {selectedBookings.length > 0 && (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleBulkAction('confirm')}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Confirm ({selectedBookings.length})
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => handleBulkAction('delete')}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete ({selectedBookings.length})
+                        Clear all
                       </Button>
                     </div>
                   )}
@@ -586,6 +715,12 @@ export default function AdminDashboard() {
             <ServiceManager />
           </TabsContent>
         </Tabs>
+        
+        {/* Quick Actions Floating Bar */}
+        <QuickActions 
+          selectedCount={selectedBookings.length} 
+          onBulkAction={handleBulkAction}
+        />
       </div>
     </div>
   );

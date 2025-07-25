@@ -35,11 +35,27 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { Eye, Download, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+  Eye, 
+  Download, 
+  Trash2, 
+  ChevronLeft, 
+  ChevronRight,
+  Calendar,
+  User,
+  Phone,
+  CreditCard,
+  FileText,
+  Clock,
+  MapPin,
+  Building2,
+  AlertCircle
+} from 'lucide-react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import PDFInvoice from './PDFInvoice';
 import api from '../services/api';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 // Utility function untuk format harga
 const formatPrice = (price) => {
@@ -52,14 +68,26 @@ const formatPrice = (price) => {
 
 // Utility function untuk format booking code
 const formatBookingCode = (booking) => {
-  // If already formatted as THIRTY format, return as is
   if (booking.display_code) {
     return booking.display_code;
   }
-  
-  // Generate display code based on ID
   const paddedId = String(booking.id).padStart(3, '0');
   return `THIRTY${paddedId}`;
+};
+
+// Modern Info Row Component
+const InfoRow = ({ icon: Icon, label, value, className }) => {
+  return (
+    <div className={cn("flex items-start gap-3", className)}>
+      <div className="mt-0.5">
+        <Icon className="h-4 w-4 text-gray-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-gray-500">{label}</p>
+        <p className="text-sm text-gray-900 mt-0.5 break-words">{value || '-'}</p>
+      </div>
+    </div>
+  );
 };
 
 export default function BookingTable({ 
@@ -151,15 +179,18 @@ export default function BookingTable({
   };
 
   const getStatusBadge = (status) => {
-    const variants = {
-      pending: 'secondary',
-      confirmed: 'default',
-      completed: 'success',
-      cancelled: 'destructive',
+    const styles = {
+      pending: 'bg-amber-50 text-amber-700 border-amber-200',
+      confirmed: 'bg-blue-50 text-blue-700 border-blue-200',
+      completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      cancelled: 'bg-red-50 text-red-700 border-red-200',
     };
     
     return (
-      <Badge variant={variants[status] || 'secondary'}>
+      <Badge 
+        variant="outline" 
+        className={cn("capitalize font-medium", styles[status] || styles.pending)}
+      >
         {status}
       </Badge>
     );
@@ -172,42 +203,44 @@ export default function BookingTable({
 
   // Mobile Card View Component
   const BookingCard = ({ booking }) => (
-    <Card className="mb-4">
+    <Card className="mb-4 hover:shadow-md transition-all duration-200">
       <CardContent className="pt-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <p className="font-semibold text-lg">{formatBookingCode(booking)}</p>
-            <p className="text-sm text-gray-600">{booking.customer_name}</p>
+            <p className="font-semibold text-lg text-gray-900">{formatBookingCode(booking)}</p>
+            <p className="text-sm text-gray-600 mt-1">{booking.customer_name}</p>
           </div>
           {getStatusBadge(booking.status)}
         </div>
         
-        <div className="space-y-2 text-sm">
-          <div>
-            <span className="text-gray-600">Service:</span>
-            <p className="font-medium">{booking.service_name} - {booking.package_name}</p>
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center gap-2 text-gray-600">
+            <FileText className="h-4 w-4" />
+            <span className="font-medium">{booking.service_name}</span>
           </div>
           
-          <div>
-            <span className="text-gray-600">Date:</span>
-            <p className="font-medium">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Calendar className="h-4 w-4" />
+            <span>
               {format(new Date(booking.booking_date), 'dd MMM yyyy')}
-              {booking.start_time && ` (${booking.start_time} - ${booking.end_time})`}
-            </p>
+              {booking.start_time && ` • ${booking.start_time.slice(0, 5)}`}
+            </span>
           </div>
           
-          <div>
-            <span className="text-gray-600">Total:</span>
-            <p className="font-medium">Rp {formatPrice(booking.total_price)}</p>
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-gray-600" />
+            <span className="font-semibold text-gray-900">
+              Rp {formatPrice(booking.total_price)}
+            </span>
           </div>
         </div>
         
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-2 mt-4 pt-4 border-t">
           <Button
             variant="outline"
             size="sm"
             onClick={() => openDetails(booking)}
-            className="flex-1"
+            className="flex-1 rounded-lg"
           >
             <Eye className="h-4 w-4 mr-1" />
             Details
@@ -216,7 +249,7 @@ export default function BookingTable({
             defaultValue={booking.status}
             onValueChange={(value) => updateBookingStatus(booking.id, value)}
           >
-            <SelectTrigger className="flex-1">
+            <SelectTrigger className="flex-1 h-9 rounded-lg">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -230,7 +263,7 @@ export default function BookingTable({
             variant="ghost"
             size="icon"
             onClick={() => handleDeleteClick(booking)}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-9 w-9"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -243,10 +276,10 @@ export default function BookingTable({
     <>
       {/* Desktop Table View */}
       <div className="hidden md:block">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-gray-200">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
                 <TableHead className="w-12">
                   <Checkbox
                     checked={isAllSelected}
@@ -255,25 +288,31 @@ export default function BookingTable({
                     className="translate-y-[2px]"
                   />
                 </TableHead>
-                <TableHead className="w-32">Code</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Service</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                <TableHead className="font-semibold text-gray-700">Code</TableHead>
+                <TableHead className="font-semibold text-gray-700">Customer</TableHead>
+                <TableHead className="font-semibold text-gray-700">Service</TableHead>
+                <TableHead className="font-semibold text-gray-700">Date & Time</TableHead>
+                <TableHead className="text-right font-semibold text-gray-700">Amount</TableHead>
+                <TableHead className="font-semibold text-gray-700">Status</TableHead>
+                <TableHead className="text-center font-semibold text-gray-700">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {bookings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                    No bookings found
+                  <TableCell colSpan={8} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                        <FileText className="h-6 w-6 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 font-medium">No bookings found</p>
+                      <p className="text-sm text-gray-400">Try adjusting your filters</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 bookings.map((booking) => (
-                  <TableRow key={booking.id}>
+                  <TableRow key={booking.id} className="hover:bg-gray-50">
                     <TableCell>
                       <Checkbox
                         checked={selectedBookings.includes(booking.id)}
@@ -282,36 +321,44 @@ export default function BookingTable({
                         className="translate-y-[2px]"
                       />
                     </TableCell>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium font-mono text-blue-600">
                       {formatBookingCode(booking)}
                     </TableCell>
-                    <TableCell>{booking.customer_name}</TableCell>
                     <TableCell>
-                      <div className="max-w-xs">
-                        <p className="truncate">{booking.service_name}</p>
-                        <p className="text-sm text-gray-500 truncate">{booking.package_name}</p>
+                      <div>
+                        <p className="font-medium text-gray-900">{booking.customer_name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{booking.phone_number}</p>
                       </div>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(booking.booking_date), 'dd MMM yyyy')}
-                      {booking.start_time && (
-                        <p className="text-sm text-gray-500">
-                          {booking.start_time} - {booking.end_time}
-                        </p>
-                      )}
+                      <div className="max-w-xs">
+                        <p className="font-medium text-gray-900 truncate">{booking.service_name}</p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">{booking.package_name}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="text-gray-900">{format(new Date(booking.booking_date), 'dd MMM yyyy')}</p>
+                        {booking.start_time && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
+                          </p>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      Rp {formatPrice(booking.total_price)}
+                      <span className="font-semibold text-gray-900">
+                        Rp {formatPrice(booking.total_price)}
+                      </span>
                     </TableCell>
                     <TableCell>{getStatusBadge(booking.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
-                        {/* Status Dropdown */}
                         <Select
                           defaultValue={booking.status}
                           onValueChange={(value) => updateBookingStatus(booking.id, value)}
                         >
-                          <SelectTrigger className="w-28 h-8 text-xs">
+                          <SelectTrigger className="w-[110px] h-8 text-xs rounded-lg">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -322,18 +369,16 @@ export default function BookingTable({
                           </SelectContent>
                         </Select>
                         
-                        {/* View Button */}
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => openDetails(booking)}
-                          className="h-8 w-8"
+                          className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
                           title="View Details"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         
-                        {/* Delete Button */}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -356,9 +401,17 @@ export default function BookingTable({
       {/* Mobile Card View */}
       <div className="md:hidden">
         {bookings.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            No bookings found
-          </div>
+          <Card>
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-gray-400" />
+                </div>
+                <p className="text-gray-500 font-medium">No bookings found</p>
+                <p className="text-sm text-gray-400">Try adjusting your filters</p>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           bookings.map((booking) => (
             <BookingCard key={booking.id} booking={booking} />
@@ -370,7 +423,8 @@ export default function BookingTable({
       {totalBookings > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
           <p className="text-sm text-gray-600">
-            Showing {startItem}-{endItem} of {totalBookings} bookings
+            Showing <span className="font-medium">{startItem}-{endItem}</span> of{' '}
+            <span className="font-medium">{totalBookings}</span> bookings
           </p>
           
           <div className="flex gap-2">
@@ -379,18 +433,52 @@ export default function BookingTable({
               size="sm"
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
+              className="gap-1.5 rounded-lg"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
+              <ChevronLeft className="h-4 w-4" />
               Previous
             </Button>
+            
+            {/* Page Numbers */}
+            <div className="hidden sm:flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                
+                return (
+                  <Button
+                    key={i}
+                    variant={pageNum === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => onPageChange(pageNum)}
+                    className={cn(
+                      "w-9 h-9 p-0 rounded-lg",
+                      pageNum === currentPage && "bg-blue-600 hover:bg-blue-700"
+                    )}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+            
             <Button
               variant="outline"
               size="sm"
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
+              className="gap-1.5 rounded-lg"
             >
               Next
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -400,30 +488,45 @@ export default function BookingTable({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the booking for {bookingToDelete?.customer_name}.
-              This action cannot be undone.
-            </AlertDialogDescription>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <AlertDialogTitle>Delete Booking?</AlertDialogTitle>
+                <AlertDialogDescription className="mt-1">
+                  This will permanently delete the booking for{' '}
+                  <span className="font-medium text-gray-900">
+                    {bookingToDelete?.customer_name}
+                  </span>
+                  . This action cannot be undone.
+                </AlertDialogDescription>
+              </div>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-lg">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 rounded-lg"
             >
-              Delete
+              Delete Booking
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Details Modal - Same as before but with formatted code */}
+      {/* Details Modal */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex justify-between items-center">
-              <DialogTitle>Booking Details</DialogTitle>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <DialogTitle className="text-xl">Booking Details</DialogTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  {selectedBooking && formatBookingCode(selectedBooking)}
+                </p>
+              </div>
               
               {selectedBooking && (
                 <PDFDownloadLink
@@ -435,8 +538,9 @@ export default function BookingTable({
                       variant="outline" 
                       size="sm"
                       disabled={loading}
+                      className="rounded-lg gap-2"
                     >
-                      <Download className="h-4 w-4 mr-2" />
+                      <Download className="h-4 w-4" />
                       {loading ? 'Generating...' : 'Download Invoice'}
                     </Button>
                   )}
@@ -446,156 +550,162 @@ export default function BookingTable({
           </DialogHeader>
           
           {selectedBooking && (
-            <div className="space-y-4">
+            <div className="space-y-6 mt-6">
               {/* Customer Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Customer Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs font-medium text-gray-500">Name</p>
-                      <p className="text-sm">{selectedBooking.customer_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500">Phone</p>
-                      <p className="text-sm">{selectedBooking.phone_number}</p>
-                    </div>
-                    {selectedBooking.faculty && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500">Faculty</p>
-                        <p className="text-sm">{selectedBooking.faculty}</p>
-                      </div>
-                    )}
-                    {selectedBooking.university && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500">University</p>
-                        <p className="text-sm">{selectedBooking.university}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Booking Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Booking Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs font-medium text-gray-500">Booking Code</p>
-                      <p className="text-sm font-mono">{formatBookingCode(selectedBooking)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500">Original Code</p>
-                      <p className="text-sm font-mono text-gray-500">{selectedBooking.booking_code}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500">Status</p>
-                      <div className="mt-1">{getStatusBadge(selectedBooking.status)}</div>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500">Service</p>
-                      <p className="text-sm">{selectedBooking.service_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500">Package</p>
-                      <p className="text-sm">{selectedBooking.package_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500">Date</p>
-                      <p className="text-sm">{format(new Date(selectedBooking.booking_date), 'dd MMM yyyy')}</p>
-                    </div>
-                    {selectedBooking.start_time && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500">Time</p>
-                        <p className="text-sm">{selectedBooking.start_time} - {selectedBooking.end_time}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Payment Info */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Payment Information</CardTitle>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="border-0 shadow-sm bg-gray-50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-semibold text-gray-900">
+                      Customer Information
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-xs font-medium text-gray-500">Total Price</p>
-                        <p className="text-lg font-semibold">Rp {formatPrice(selectedBooking.total_price)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-gray-500">Payment Type</p>
-                        <p className="text-sm capitalize">{selectedBooking.payment_type?.replace('_', ' ')}</p>
-                      </div>
-                      {selectedBooking.payment_method && (
-                        <div>
-                          <p className="text-xs font-medium text-gray-500">Payment Method</p>
-                          <p className="text-sm capitalize">{selectedBooking.payment_method}</p>
-                        </div>
-                      )}
-                      {selectedBooking.selected_bank && (
-                        <div>
-                          <p className="text-xs font-medium text-gray-500">Bank</p>
-                          <p className="text-sm">{selectedBooking.selected_bank}</p>
-                        </div>
-                      )}
-                    </div>
+                    <InfoRow icon={User} label="Full Name" value={selectedBooking.customer_name} />
+                    <InfoRow icon={Phone} label="Phone Number" value={selectedBooking.phone_number} />
+                    {selectedBooking.faculty && (
+                      <InfoRow icon={Building2} label="Faculty" value={selectedBooking.faculty} />
+                    )}
+                    {selectedBooking.university && (
+                      <InfoRow icon={MapPin} label="University" value={selectedBooking.university} />
+                    )}
                   </CardContent>
                 </Card>
 
-                {/* Timestamps */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Timestamps</CardTitle>
+                {/* Booking Info */}
+                <Card className="border-0 shadow-sm bg-gray-50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-semibold text-gray-900">
+                      Booking Information
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 gap-3 text-sm">
-                      <div>
-                        <p className="text-xs font-medium text-gray-500">Created</p>
-                        <p className="text-sm">{format(new Date(selectedBooking.created_at), 'dd MMM yyyy, HH:mm')}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-gray-500">Updated</p>
-                        <p className="text-sm">{format(new Date(selectedBooking.updated_at), 'dd MMM yyyy, HH:mm')}</p>
-                      </div>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Status</span>
+                      {getStatusBadge(selectedBooking.status)}
                     </div>
+                    <InfoRow icon={FileText} label="Service" value={selectedBooking.service_name} />
+                    <InfoRow icon={FileText} label="Package" value={selectedBooking.package_name} />
+                    <InfoRow 
+                      icon={Calendar} 
+                      label="Date" 
+                      value={format(new Date(selectedBooking.booking_date), 'EEEE, dd MMMM yyyy')} 
+                    />
+                    {selectedBooking.start_time && (
+                      <InfoRow 
+                        icon={Clock} 
+                        label="Time Slot" 
+                        value={`${selectedBooking.start_time} - ${selectedBooking.end_time}`} 
+                      />
+                    )}
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Payment Proof - Full Width */}
+              {/* Payment Details */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold text-gray-900">
+                    Payment Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="p-4 bg-blue-50 rounded-xl">
+                      <p className="text-sm text-gray-600 mb-1">Total Amount</p>
+                      <p className="text-2xl font-bold text-blue-600">
+                        Rp {formatPrice(selectedBooking.total_price)}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <p className="text-sm text-gray-600 mb-1">Payment Type</p>
+                      <p className="font-semibold text-gray-900 capitalize">
+                        {selectedBooking.payment_type?.replace('_', ' ')}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <p className="text-sm text-gray-600 mb-1">Payment Method</p>
+                      <p className="font-semibold text-gray-900 capitalize">
+                        {selectedBooking.payment_method || 'Not specified'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {selectedBooking.selected_bank && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+                      <p className="text-sm text-gray-600 mb-1">Bank</p>
+                      <p className="font-semibold text-gray-900">{selectedBooking.selected_bank}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Payment Proof */}
               {selectedBooking.payment_proof && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Payment Proof</CardTitle>
+                <Card className="border-0 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-semibold text-gray-900">
+                      Payment Proof
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="border rounded-lg p-4 bg-gray-50">
+                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50">
                       <img
                         src={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
                         alt="Payment Proof"
-                        className="max-w-full h-auto max-h-96 rounded mx-auto block border"
+                        className="max-w-full h-auto max-h-96 rounded-lg mx-auto block"
                         onError={(e) => {
                           e.target.style.display = 'none';
-                          e.target.nextElementSibling.style.display = 'block';
+                          e.target.nextElementSibling.style.display = 'flex';
                         }}
                       />
-                      <div className="hidden text-center text-gray-500 py-8">
-                        <p className="mb-2">Payment proof image not available</p>
-                        <p className="text-sm mb-4">File: {selectedBooking.payment_proof}</p>
+                      <div className="hidden flex-col items-center justify-center py-12 text-center">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                          <FileText className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <p className="text-gray-500 mb-2">Payment proof not available</p>
+                        <p className="text-sm text-gray-400">File: {selectedBooking.payment_proof}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
+
+              {/* Timestamps */}
+              <Card className="border-0 shadow-sm bg-gray-50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold text-gray-900">
+                    Additional Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Booking Created</p>
+                      <p className="font-medium text-gray-900">
+                        {format(new Date(selectedBooking.created_at), 'dd MMM yyyy, HH:mm')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Last Updated</p>
+                      <p className="font-medium text-gray-900">
+                        {format(new Date(selectedBooking.updated_at), 'dd MMM yyyy, HH:mm')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Original Booking Code</p>
+                      <p className="font-medium font-mono text-gray-900">
+                        {selectedBooking.booking_code}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Display Code</p>
+                      <p className="font-medium font-mono text-gray-900">
+                        {formatBookingCode(selectedBooking)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </DialogContent>
