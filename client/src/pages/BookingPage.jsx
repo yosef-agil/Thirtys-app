@@ -952,9 +952,9 @@ const handleNext = async () => {
                         {/* QRIS Image */}
                         <div className="inline-block p-4 bg-gray-50 rounded-xl mb-4">
                           <img 
-                            src="/public/qris/thirtys-qris.jpeg" // Path to your QRIS image
-                            alt="QRIS Payment Code"
-                            className="w-48 h-48 object-contain"
+                            src="https://res.cloudinary.com/dtv63pzsn/image/upload/v1753463191/thirtys-qris_yuv0db.jpg" 
+                            alt="QRIS Payment Code" 
+                            className="w-48 h-48 object-contain" 
                           />
                         </div>
                         
