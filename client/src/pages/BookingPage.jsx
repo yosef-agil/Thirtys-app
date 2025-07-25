@@ -294,7 +294,7 @@ const ThankYouPage = ({ bookingDetails }) => {
         <Card className="border-0 shadow-xl bg-white">
           <CardContent className="p-6">
             <div className="text-center mb-6">
-              <p className="text-sm text-gray-500 mb-2">Your booking code</p>
+              <p className="text-sm text-gray-500 mb-2">Kode booking kamu!</p>
               <p className="text-2xl font-bold text-blue-600 font-mono bg-blue-50 py-3 px-4 rounded-lg">
                 {bookingDetails.bookingCode}
               </p>
@@ -323,7 +323,7 @@ const ThankYouPage = ({ bookingDetails }) => {
             
             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600 text-center">
-                We'll contact you via WhatsApp within 24 hours to confirm your session details.
+                Screenshot kode booking ini untuk di perlihatkan saat sesi foto berlangsung dan juga kami akan menghubungi via WhatsApp untuk konfirmasi sesi foto kamu. Terima kasih!
               </p>
             </div>
           </CardContent>
@@ -675,8 +675,8 @@ const handleNext = async () => {
             {currentStep === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Let's get started</h2>
-                  <p className="text-gray-600 mt-2">We'll need some basic information to book your session</p>
+                  <h2 className="text-2xl font-bold text-gray-900">Hi Thirtys!</h2>
+                  <p className="text-gray-600 mt-2">Silahkan mengisi data diri untuk melakukan booking foto ya</p>
                 </div>
                 
                 <div className="space-y-4 mt-8">
@@ -690,7 +690,7 @@ const handleNext = async () => {
                   />
                   
                   <ModernInput
-                    label="Phone Number"
+                    label="WhatsApp Number"
                     icon={Phone}
                     required
                     {...register('phoneNumber')}
@@ -705,8 +705,8 @@ const handleNext = async () => {
             {currentStep === 2 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Choose your service</h2>
-                  <p className="text-gray-600 mt-2">Select the perfect package for your needs</p>
+                  <h2 className="text-2xl font-bold text-gray-900">Pilih Service</h2>
+                  <p className="text-gray-600 mt-2">Silahkan pilih service dan paket sesuai kebutuhan kamu</p>
                 </div>
                 
                 <div className="mt-8">
@@ -778,8 +778,8 @@ const handleNext = async () => {
             {currentStep === 3 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Pick your date</h2>
-                  <p className="text-gray-600 mt-2">When would you like to have your session?</p>
+                  <h2 className="text-2xl font-bold text-gray-900">Pilih tanggalnya</h2>
+                  <p className="text-gray-600 mt-2">Kapan pelaksanaan sesi foto kamu?</p>
                 </div>
 
                 <div className="grid gap-8 lg:grid-cols-2 mt-8">
@@ -851,7 +851,7 @@ const handleNext = async () => {
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Payment details</h2>
-                  <p className="text-gray-600 mt-2">Choose your preferred payment method</p>
+                  <p className="text-gray-600 mt-2">Pilih metode pembayaran</p>
                 </div>
 
                 {/* Payment Type */}
@@ -973,14 +973,14 @@ const handleNext = async () => {
                     
                     {/* Payment Instructions */}
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                      <p className="text-sm text-amber-800 font-medium mb-2">Payment Instructions:</p>
+                      <p className="text-sm text-amber-800 font-medium mb-2">Instruksi pembayaran:</p>
                       <ol className="text-sm text-amber-700 space-y-1 list-decimal list-inside">
-                        <li>Open your e-wallet or mobile banking app</li>
-                        <li>Scan the QR code above</li>
-                        <li>Verify the amount matches: Rp {formatPrice(totalPrice.paymentAmount)}</li>
-                        <li>Complete the payment</li>
-                        <li>Screenshot your payment confirmation</li>
-                        <li>Upload the screenshot below</li>
+                        <li>Buka aplikasi e-wallet atau m-banking kamu</li>
+                        <li>Scan QR code diatas </li>
+                        <li>Pastikan jumlahnya sesuai: Rp {formatPrice(totalPrice.paymentAmount)}</li>
+                        <li>Selesaikan pembayarannya</li>
+                        <li>Screenshot bukti pembayaran berhasil</li>
+                        <li>Upload screenshot dibawah ini</li>
                       </ol>
                     </div>
                     
@@ -1069,7 +1069,7 @@ const handleNext = async () => {
                     </div>
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                       <p className="text-sm text-amber-800">
-                        Please send payment proof via WhatsApp after transfer
+                        Harap untuk menyimpan bukti pembayaran
                       </p>
                     </div>
                   </div>
@@ -1123,8 +1123,7 @@ const handleNext = async () => {
                 {watchPaymentMethod === 'cash' && (
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                     <p className="text-sm text-amber-800">
-                      <strong>Cash Payment:</strong> Please bring the exact amount on your session day. 
-                      We'll provide a receipt upon payment.
+                      <strong>Cash Payment:</strong> Harap bawa jumlah yang tepat pada hari sesi Anda. Kami akan memberikan tanda terima setelah pembayaran.
                     </p>
                   </div>
                 )}
