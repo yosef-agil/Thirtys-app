@@ -1,15 +1,3 @@
-// import express from 'express';
-// import cors from 'cors';
-// import dotenv from 'dotenv';
-// import path from 'path';
-// import { fileURLToPath } from 'url';
-// import authRoutes from './routes/auth.js';
-// import bookingRoutes from './routes/bookings.js';
-// import serviceRoutes from './routes/services.js';
-// import adminRoutes from './routes/admin.js';
-// import pool from './config/database.js'; // Pastikan ini ada
-// import fs from 'fs';
-
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -20,6 +8,7 @@ import authRoutes from './routes/auth.js';
 import bookingRoutes from './routes/bookings.js';
 import serviceRoutes from './routes/services.js';
 import adminRoutes from './routes/admin.js';
+import timeSlotRoutes from './routes/timeSlots.js';
 import pool from './config/database.js';
 
 dotenv.config();
@@ -30,8 +19,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.use('/qris', express.static(path.join(__dirname, 'public/qris')));
-
 // Create uploads directory
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -39,7 +26,7 @@ if (!fs.existsSync(uploadsDir)) {
   console.log('Uploads directory created');
 }
 
-// Middleware
+// Middleware - HANYA SEKALI
 app.use(cors({
   origin: [
     'http://localhost:5173',
@@ -52,25 +39,27 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Static files
+app.use('/qris', express.static(path.join(__dirname, 'public/qris')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use(express.static(path.join(__dirname, '../client/dist')));
 
-// Routes
+// API Routes - Perbaiki urutan dan mount point
 app.use('/api/auth', authRoutes);
-app.use('/api/bookings', bookingRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/time-slots', timeSlotRoutes); // Mount terpisah untuk time slots
+app.use('/api/bookings', bookingRoutes);
 
+// Static files untuk production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-  });
 }
 
 // Catch all routes
 app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  
   res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
@@ -84,7 +73,7 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
-// Test database connection on startup
+// Test database connection
 const testDbConnection = async () => {
   try {
     const [rows] = await pool.execute('SELECT 1');

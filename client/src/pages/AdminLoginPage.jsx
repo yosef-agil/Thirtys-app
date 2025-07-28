@@ -82,14 +82,14 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        {/* Logo/Brand */}
+        {/* Logo/Brand
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200">
             <Camera className="h-10 w-10 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Thirtys Studio</h1>
           <p className="text-gray-600 mt-2">Admin Portal</p>
-        </div>
+        </div> */}
 
         <Card className="border-0 shadow-xl bg-white">
           <CardHeader className="pb-4">

@@ -110,7 +110,6 @@ const ServiceCard = ({ service, packages, onEditService, onDeleteService, onEdit
             <div className="flex flex-wrap items-center gap-2">
               {/* Service Info Badges */}
               <Badge variant="outline" className="gap-1.5 border-gray-200">
-                <DollarSign className="h-3 w-3" />
                 Rp {formatPrice(service.base_price)}
               </Badge>
               
@@ -463,7 +462,6 @@ export default function ServiceManager() {
                   
                   <ModernInput
                     label="Base Price"
-                    icon={DollarSign}
                     prefix="Rp"
                     type="number"
                     value={serviceForm.base_price}
@@ -614,7 +612,6 @@ export default function ServiceManager() {
             
             <ModernInput
               label="Price"
-              icon={DollarSign}
               prefix="Rp"
               type="number"
               value={packageForm.price}

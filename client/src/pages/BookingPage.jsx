@@ -146,7 +146,7 @@ const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, s
                         <p className="text-lg font-bold text-blue-600">
                           Rp {formatPrice(pkg.price * (1 - service.discount_percentage / 100))}
                         </p>
-                        <p className="text-xs text-gray-400 line-through">
+                        <p className="text-ss text-gray-400 line-through">
                           Rp {formatPrice(pkg.price)}
                         </p>
                       </div>

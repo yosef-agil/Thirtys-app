@@ -32,6 +32,7 @@ import {
 import { format } from 'date-fns';
 import BookingTable from '../components/BookingTable';
 import ServiceManager from '../components/ServiceManager';
+import TimeSlotManager from '../components/TimeSlotManager';
 import api from '../services/api';
 import * as XLSX from 'xlsx';
 import { cn } from '@/lib/utils';
@@ -589,6 +590,12 @@ export default function AdminDashboard() {
             >
               Services
             </TabsTrigger>
+            <TabsTrigger 
+              value="timeslots"
+              className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            >
+              Time Slots
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
@@ -713,6 +720,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="services">
             <ServiceManager />
+          </TabsContent>
+
+          <TabsContent value="timeslots">
+            <TimeSlotManager />
           </TabsContent>
         </Tabs>
         
