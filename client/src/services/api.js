@@ -1,7 +1,11 @@
 // client/src/services/api.js
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://thirtys-code-production.up.railway.app/api';
+const API_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.PROD 
+    ? 'https://thirtys-code-production.up.railway.app/api'
+    : 'http://localhost:8080/api'
+);
 
 const api = axios.create({
   baseURL: API_URL,
