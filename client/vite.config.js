@@ -12,9 +12,13 @@ export default defineConfig({
   css: {
     postcss: './postcss.config.js'
   },
-  //   build: {
-  //   rollupOptions: {
-  //     external: ['PDFInvoice']
-  //   }
-  // }
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  }
 })

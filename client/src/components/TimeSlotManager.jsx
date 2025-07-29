@@ -221,28 +221,18 @@ const loadTimeSlots = async () => {
   try {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     
-    // Debug logs
-    console.log('=== DEBUG TIME SLOTS ===');
-    console.log('API instance:', api);
-    console.log('API baseURL:', api.defaults.baseURL);
-    console.log('Selected Service ID:', selectedService.id);
-    console.log('Date:', dateStr);
-    
-    const url = `/time-slots/${selectedService.id}`;
-    console.log('Requesting URL:', url);
-    console.log('Full URL would be:', api.defaults.baseURL + url);
-    
-    const response = await api.get(url, {
-      params: { date: dateStr }
+    // Gunakan query parameter sesuai dengan backend
+    const response = await api.get('/time-slots', {
+      params: { 
+        serviceId: selectedService.id,
+        date: dateStr 
+      }
     });
     
-    console.log('Response:', response);
+    console.log('Time slots response:', response.data);
     setTimeSlots(response.data || []);
   } catch (error) {
-    console.error('=== ERROR DETAILS ===');
-    console.error('Error:', error);
-    console.error('Error response:', error.response);
-    console.error('Error request:', error.request);
+    console.error('Failed to load time slots:', error);
     setTimeSlots([]);
   }
 };
@@ -260,14 +250,14 @@ const loadTimeSlots = async () => {
       };
 
       if (editingSlot) {
-        await api.put(`/bookings/time-slots/${editingSlot.id}`, {
+        await api.put(`/time-slots/${editingSlot.id}`, {
           start_time: data.start_time,
           end_time: data.end_time,
           max_capacity: data.max_capacity
         });
         toast({ title: 'Success', description: 'Time slot updated' });
       } else {
-        await api.post('/bookings/time-slots', data);
+        await api.post('/time-slots', data);
         toast({ title: 'Success', description: 'Time slot created' });
       }
 
@@ -327,7 +317,7 @@ const loadTimeSlots = async () => {
       }
 
       // Send bulk create request
-      await api.post('/bookings/time-slots/bulk', { slots });
+      await api.post('/time-slots/bulk', { slots });
       
       toast({
         title: 'Success',
@@ -364,7 +354,7 @@ const loadTimeSlots = async () => {
     if (!slotToDelete) return;
     
     try {
-      await api.delete(`/bookings/time-slots/${slotToDelete.id}`);
+      await api.delete(`/time-slots/${slotToDelete.id}`);
       toast({ title: 'Success', description: 'Time slot deleted' });
       setDeleteDialogOpen(false);
       setSlotToDelete(null);
