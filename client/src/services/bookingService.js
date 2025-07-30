@@ -13,7 +13,10 @@ export const bookingService = {
   },
   
   getTimeSlots: async (serviceId, date) => {
-    const response = await api.get(`/services/${serviceId}/time-slots?date=${date}`);
+    // Gunakan endpoint yang konsisten
+    const response = await api.get('/time-slots', {
+      params: { serviceId, date }
+    });
     return response.data;
   },
   

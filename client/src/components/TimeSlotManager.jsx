@@ -238,40 +238,41 @@ const loadTimeSlots = async () => {
 };
 
   const handleSlotSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const data = {
+  e.preventDefault();
+  
+  try {
+    // Hanya kirim data yang diperlukan
+    const payload = {
+      start_time: slotForm.start_time + ':00',
+      end_time: slotForm.end_time + ':00',
+      max_capacity: parseInt(slotForm.max_capacity)
+    };
+
+    if (editingSlot) {
+      // PUT hanya mengirim 3 field
+      await api.put(`/time-slots/${editingSlot.id}`, payload);
+      toast({ title: 'Success', description: 'Time slot updated' });
+    } else {
+      // POST tetap mengirim semua field
+      await api.post('/time-slots', {
         service_id: selectedService.id,
         date: format(selectedDate, 'yyyy-MM-dd'),
-        start_time: slotForm.start_time + ':00',
-        end_time: slotForm.end_time + ':00',
-        max_capacity: parseInt(slotForm.max_capacity)
-      };
-
-      if (editingSlot) {
-        await api.put(`/time-slots/${editingSlot.id}`, {
-          start_time: data.start_time,
-          end_time: data.end_time,
-          max_capacity: data.max_capacity
-        });
-        toast({ title: 'Success', description: 'Time slot updated' });
-      } else {
-        await api.post('/time-slots', data);
-        toast({ title: 'Success', description: 'Time slot created' });
-      }
-
-      setSlotFormOpen(false);
-      resetSlotForm();
-      loadTimeSlots();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to save time slot',
-        variant: 'destructive',
+        ...payload
       });
+      toast({ title: 'Success', description: 'Time slot created' });
     }
-  };
+
+    setSlotFormOpen(false);
+    resetSlotForm();
+    loadTimeSlots();
+  } catch (error) {
+    toast({
+      title: 'Error',
+      description: error.response?.data?.message || 'Failed to save time slot',
+      variant: 'destructive',
+    });
+  }
+};
 
   const handleBulkCreate = async () => {
     try {

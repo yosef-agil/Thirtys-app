@@ -63,27 +63,31 @@ router.post('/', authenticateToken, async (req, res) => {
 
 // ✅ UPDATE time slot
 router.put('/:id', authenticateToken, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { start_time, end_time, max_capacity } = req.body; // Hanya ambil field yang diperlukan
+
+  // Validasi field yang diperlukan
+  if (!start_time || !end_time || max_capacity === undefined) {
+    return res.status(400).json({ error: 'start_time, end_time, and max_capacity are required' });
+  }
+
   try {
-    const { id } = req.params;
-    const { service_id, date, start_time, end_time, max_capacity } = req.body;
-
-    if (!service_id || !date || !start_time || !end_time || !max_capacity) {
-      return res.status(400).json({ error: 'All fields are required' });
-    }
-
-    const [result] = await pool.execute(
-      'UPDATE time_slots SET service_id = ?, date = ?, start_time = ?, end_time = ?, max_capacity = ? WHERE id = ?',
-      [service_id, date, start_time, end_time, max_capacity, id]
-    );
-
-    if (result.affectedRows === 0) {
+    // Cek apakah slot ada
+    const [slot] = await pool.execute('SELECT * FROM time_slots WHERE id = ?', [id]);
+    if (slot.length === 0) {
       return res.status(404).json({ error: 'Time slot not found' });
     }
 
-    res.json({ success: true, message: 'Time slot updated successfully' });
+    // Update hanya field yang diizinkan
+    await pool.execute(
+      'UPDATE time_slots SET start_time = ?, end_time = ?, max_capacity = ? WHERE id = ?',
+      [start_time, end_time, max_capacity, id]
+    );
+
+    res.json({ message: 'Time slot updated successfully' });
   } catch (error) {
     console.error('Error updating time slot:', error);
-    res.status(500).json({ error: 'Failed to update time slot' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
