@@ -36,6 +36,7 @@ import TimeSlotManager from '../components/TimeSlotManager';
 import api from '../services/api';
 import * as XLSX from 'xlsx';
 import { cn } from '@/lib/utils';
+import PromoCodeManager from '../components/PromoCodeManager';
 
 // Utility function untuk format harga
 const formatPrice = (price) => {
@@ -596,6 +597,12 @@ export default function AdminDashboard() {
             >
               Time Slots
             </TabsTrigger>
+            <TabsTrigger 
+              value="promocodes"
+              className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            >
+              Promo Codes
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
@@ -724,6 +731,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="timeslots">
             <TimeSlotManager />
+          </TabsContent>
+
+          <TabsContent value="promocodes">
+            <PromoCodeManager />
           </TabsContent>
         </Tabs>
         

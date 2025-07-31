@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Clock,
   CheckCircle,
+  XCircle,
   Calendar as CalendarIcon,
   CreditCard,
   User2,
@@ -29,6 +30,7 @@ import {
 } from 'lucide-react';
 import { bookingService } from '../services/bookingService';
 import { cn } from '@/lib/utils';
+import api from '../services/api';
 
 // Utility function untuk format harga
 const formatPrice = (price) => {
@@ -173,26 +175,35 @@ const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, s
 const TimeSlotGrid = ({ slots, selected, onSelect }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-      {slots.map(slot => (
-        <button
-          key={slot.id}
-          type="button"
-          onClick={() => onSelect(slot.id.toString())}
-          className={cn(
-            "p-2.5 sm:p-3 rounded-lg sm:rounded-xl border text-xs sm:text-sm font-medium transition-all duration-200",
-            selected === slot.id.toString()
-              ? "border-blue-500 bg-blue-50 text-blue-700"
-              : "border-gray-200 hover:border-gray-300 text-gray-700 bg-white"
-          )}
-        >
-          <div className="text-center">
-            <p className="font-semibold">{slot.start_time}</p>
-            <p className="text-xs mt-0.5 sm:mt-1 opacity-75">
-              {slot.available_slots} slots left
-            </p>
-          </div>
-        </button>
-      ))}
+      {slots.map(slot => {
+        // Calculate available slots
+        const availableSlots = slot.max_capacity - (slot.current_bookings || 0);
+        const isAvailable = availableSlots > 0;
+        
+        return (
+          <button
+            key={slot.id}
+            type="button"
+            onClick={() => isAvailable && onSelect(slot.id.toString())}
+            disabled={!isAvailable}
+            className={cn(
+              "p-2.5 sm:p-3 rounded-lg sm:rounded-xl border text-xs sm:text-sm font-medium transition-all duration-200",
+              selected === slot.id.toString()
+                ? "border-blue-500 bg-blue-50 text-blue-700"
+                : isAvailable
+                  ? "border-gray-200 hover:border-gray-300 text-gray-700 bg-white"
+                  : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
+            )}
+          >
+            <div className="text-center">
+              <p className="font-semibold">{slot.start_time}</p>
+              <p className="text-xs mt-0.5 sm:mt-1 opacity-75">
+                {isAvailable ? `${availableSlots} slots left` : 'Fully booked'}
+              </p>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 };
@@ -383,6 +394,9 @@ export default function BookingPage() {
   const [bookingDetails, setBookingDetails] = useState(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [promoCode, setPromoCode] = useState(''); // NEW
+  const [promoValidation, setPromoValidation] = useState(null); // NEW
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false); // NEW
 
   const steps = 4;
 
@@ -465,6 +479,56 @@ export default function BookingPage() {
     }
   };
 
+  //  Tambahkan function untuk validate promo code
+// Update fungsi validatePromoCode di BookingPage.jsx
+
+const validatePromoCode = async () => {
+  if (!promoCode.trim()) {
+    setPromoValidation(null);
+    return;
+  }
+
+  setIsValidatingPromo(true);
+  try {
+    // Debug log
+    console.log('Validating promo code:', {
+      code: promoCode,
+      service_id: watchService,
+      phone_number: watch('phoneNumber'),
+      booking_date: watch('bookingDate') // Add booking date
+    });
+
+    const response = await api.post('/promo-codes/validate', {
+      code: promoCode.toUpperCase(),
+      service_id: watchService,
+      phone_number: watch('phoneNumber'),
+      booking_date: watch('bookingDate') ? format(watch('bookingDate'), 'yyyy-MM-dd') : null // Send booking date
+    });
+
+    console.log('Promo validation response:', response.data);
+
+    if (response.data.success) {
+      setPromoValidation({
+        valid: true,
+        data: response.data.promoCode,
+        message: `Promo applied! You get ${
+          response.data.promoCode.discount_type === 'percentage' 
+            ? `${response.data.promoCode.discount_value}% off` 
+            : `Rp ${formatPrice(response.data.promoCode.discount_value)} off`
+        }`
+      });
+    }
+  } catch (error) {
+    console.error('Promo validation error:', error.response?.data);
+    setPromoValidation({
+      valid: false,
+      message: error.response?.data?.error || 'Invalid promo code'
+    });
+  } finally {
+    setIsValidatingPromo(false);
+  }
+};
+
   useEffect(() => {
     if (watchService && watchDate && selectedService?.has_time_slots) {
       loadTimeSlots(watchService, format(watchDate, 'yyyy-MM-dd'));
@@ -479,8 +543,20 @@ export default function BookingPage() {
         let originalPrice = pkg.price;
         let discountedPrice = originalPrice;
         
+        // Apply service discount
         if (selectedService?.discount_percentage) {
           discountedPrice = originalPrice * (1 - selectedService.discount_percentage / 100);
+        }
+        
+        // Apply promo code discount
+        let promoDiscountAmount = 0;
+        if (promoValidation?.valid) {
+          if (promoValidation.data.discount_type === 'percentage') {
+            promoDiscountAmount = discountedPrice * (promoValidation.data.discount_value / 100);
+          } else {
+            promoDiscountAmount = Math.min(promoValidation.data.discount_value, discountedPrice);
+          }
+          discountedPrice -= promoDiscountAmount;
         }
         
         let paymentAmount = discountedPrice;
@@ -492,12 +568,13 @@ export default function BookingPage() {
           originalPrice,
           discountedPrice,
           paymentAmount,
+          promoDiscountAmount, // NEW
           paymentType: watchPaymentType,
           discountPercentage: selectedService?.discount_percentage || 0
         });
       }
     }
-  }, [watchPackage, watchPaymentType, packages, selectedService]);
+  }, [watchPackage, watchPaymentType, packages, selectedService, promoValidation]);
 
   useEffect(() => {
     if (watchPaymentProof && watchPaymentProof[0]) {
@@ -542,9 +619,13 @@ export default function BookingPage() {
   const loadTimeSlots = async (serviceId, date) => {
     try {
       const data = await bookingService.getTimeSlots(serviceId, date);
+      
+      // Data should include max_capacity and current_bookings for each slot
+      console.log('Time slots loaded:', data);
       setTimeSlots(data);
     } catch (error) {
       console.error('Failed to load time slots:', error);
+      setTimeSlots([]);
     }
   };
 
@@ -591,6 +672,8 @@ const handleNext = async () => {
   };
 
   const onSubmit = async (data) => {
+    if (loading) return;
+
     setLoading(true);
   
       try {
@@ -604,6 +687,11 @@ const handleNext = async () => {
         formData.append('paymentType', data.paymentType);
         formData.append('paymentMethod', data.paymentMethod);
         
+        // Add promo code if valid
+        if (promoValidation?.valid) {
+              formData.append('promoCode', promoCode);
+            }
+
         if (data.timeSlotId) formData.append('timeSlotId', data.timeSlotId);
         if (data.faculty) formData.append('faculty', data.faculty);
         if (data.university) formData.append('university', data.university);
@@ -942,6 +1030,57 @@ const handleNext = async () => {
                   )}
                 </div>
 
+                {/* Promo Code Section - tambahkan setelah payment method */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-gray-700">Promo Code (Optional)</h3>
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <Input
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode(e.target.value.toUpperCase());
+                          setPromoValidation(null);
+                        }}
+                        placeholder="Enter promo code"
+                        className={cn(
+                          "h-12 rounded-xl pr-10",
+                          promoValidation?.valid && "border-green-500 focus:border-green-500",
+                          promoValidation?.valid === false && "border-red-500 focus:border-red-500"
+                        )}
+                      />
+                      {promoValidation && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {promoValidation.valid ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-600" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={validatePromoCode}
+                      disabled={!promoCode.trim() || isValidatingPromo || !watchService}
+                      className="h-12 px-6 rounded-xl"
+                    >
+                      {isValidatingPromo ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        'Apply'
+                      )}
+                    </Button>
+                  </div>
+                  {promoValidation?.message && (
+                    <p className={cn(
+                      "text-sm",
+                      promoValidation.valid ? "text-green-600" : "text-red-600"
+                    )}>
+                      {promoValidation.message}
+                    </p>
+                  )}
+                </div>
+
                 {/* QRIS Payment Info */}
                 {watchPaymentMethod === 'qris' && watchPaymentType && (
                   <div className="space-y-4">
@@ -1140,26 +1279,36 @@ const handleNext = async () => {
                       </div>
                       
                       {totalPrice.discountPercentage > 0 && (
-                        <>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-emerald-600">Discount ({totalPrice.discountPercentage}%)</span>
-                            <span className="font-medium text-emerald-600">
-                              -Rp {formatPrice(totalPrice.originalPrice - totalPrice.discountedPrice)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm pt-3 border-t">
-                            <span className="text-gray-600">Subtotal</span>
-                            <span className="font-medium">Rp {formatPrice(totalPrice.discountedPrice)}</span>
-                          </div>
-                        </>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-emerald-600">Service Discount ({totalPrice.discountPercentage}%)</span>
+                          <span className="font-medium text-emerald-600">
+                            -Rp {formatPrice(totalPrice.originalPrice * (totalPrice.discountPercentage / 100))}
+                          </span>
+                        </div>
                       )}
+                      
+                      {totalPrice.promoDiscountAmount > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-blue-600">Promo Code Discount</span>
+                          <span className="font-medium text-blue-600">
+                            -Rp {formatPrice(totalPrice.promoDiscountAmount)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between text-sm pt-3 border-t">
+                        <span className="text-gray-600">Subtotal</span>
+                        <span className="font-medium">Rp {formatPrice(totalPrice.discountedPrice)}</span>
+                      </div>
                       
                       <div className="flex justify-between pt-3 border-t">
                         {totalPrice.paymentType === 'down_payment' ? (
                           <>
                             <div className="space-y-1">
                               <p className="font-semibold text-gray-900">Down Payment (50%)</p>
-                              <p className="text-xs text-gray-500">Remaining: Rp {formatPrice(totalPrice.discountedPrice - totalPrice.paymentAmount)}</p>
+                              <p className="text-xs text-gray-500">
+                                Remaining: Rp {formatPrice(totalPrice.discountedPrice - totalPrice.paymentAmount)}
+                              </p>
                             </div>
                             <p className="text-xl font-bold text-blue-600">
                               Rp {formatPrice(totalPrice.paymentAmount)}

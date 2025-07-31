@@ -10,6 +10,7 @@ import serviceRoutes from './routes/services.js';
 import adminRoutes from './routes/admin.js';
 import timeSlotRoutes from './routes/timeSlots.js';
 import pool from './config/database.js';
+import promoRoutes from './routes/promoCodes.js';
 
 dotenv.config();
 
@@ -38,6 +39,11 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
 // Static files
 app.use('/qris', express.static(path.join(__dirname, 'public/qris')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -48,6 +54,7 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/time-slots', timeSlotRoutes); // Mount terpisah untuk time slots
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/promo-codes', promoRoutes);
 
 // Static files untuk production
 if (process.env.NODE_ENV === 'production') {

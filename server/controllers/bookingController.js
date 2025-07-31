@@ -27,6 +27,7 @@ export const createBooking = async (req, res) => {
       paymentType,
       paymentMethod,  // NEW
       selectedBank,   // NEW
+      promoCode,  // NEW
       totalPrice,
       paidAmount
     } = req.body;
@@ -61,7 +62,7 @@ export const createBooking = async (req, res) => {
 
     let calculatedFullPrice = packageData[0].price;
 
-    // Apply discount if any
+    // Apply service discount if any
     const [serviceData] = await connection.execute(
       'SELECT discount_percentage FROM services WHERE id = ?',
       [serviceId]
@@ -71,15 +72,45 @@ export const createBooking = async (req, res) => {
       calculatedFullPrice = calculatedFullPrice * (1 - serviceData[0].discount_percentage / 100);
     }
 
-    // Use frontend-provided totalPrice if available, otherwise use calculated
-    const finalFullPrice = totalPrice ? parseFloat(totalPrice) : calculatedFullPrice;
+    // NEW - Handle promo code
+    let promoCodeId = null;
+    let promoDiscountAmount = 0;
     
-    // Calculate paid amount if not provided
+    if (promoCode) {
+      // Validate promo code
+      const [promoCodes] = await connection.execute(`
+        SELECT * FROM promo_codes 
+        WHERE code = ? 
+        AND is_active = true
+        AND (service_id IS NULL OR service_id = ?)
+        AND (valid_from IS NULL OR valid_from <= NOW())
+        AND (valid_until IS NULL OR valid_until >= NOW())
+        AND (usage_limit IS NULL OR used_count < usage_limit)
+        FOR UPDATE
+      `, [promoCode.toUpperCase(), serviceId]);
+
+      if (promoCodes.length > 0) {
+        const promoData = promoCodes[0];
+        promoCodeId = promoData.id;
+
+        // Calculate promo discount
+        if (promoData.discount_type === 'percentage') {
+          promoDiscountAmount = calculatedFullPrice * (promoData.discount_value / 100);
+        } else {
+          promoDiscountAmount = Math.min(promoData.discount_value, calculatedFullPrice);
+        }
+      }
+    }
+
+
+    // Use frontend-provided totalPrice if available, otherwise use calculated
+    const finalFullPrice = calculatedFullPrice - promoDiscountAmount;
+    
+    // Calculate paid amount
     let finalPaidAmount;
     if (paidAmount) {
       finalPaidAmount = parseFloat(paidAmount);
     } else {
-      // Fallback calculation
       finalPaidAmount = paymentType === 'down_payment' ? finalFullPrice * 0.5 : finalFullPrice;
     }
 
@@ -119,39 +150,67 @@ export const createBooking = async (req, res) => {
 
     if (hasPaymentMethodColumn) {
       insertQuery = `
-        INSERT INTO bookings (
-          booking_code, customer_name, phone_number, service_id, package_id,
-          booking_date, time_slot_id, faculty, university, total_price,
-          payment_type, payment_method, selected_bank, payment_proof, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+      INSERT INTO bookings (
+        booking_code, customer_name, phone_number, service_id, package_id,
+        booking_date, time_slot_id, faculty, university, total_price,
+        payment_type, payment_method, selected_bank, payment_proof, 
+        promo_code_id, discount_amount, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
       `;
       insertParams = [
-        bookingCode, customerName, phoneNumber, serviceId, packageId,
-        bookingDate, timeSlotId || null, faculty || null, university || null, 
-        finalFullPrice,
-        paymentType, 
-        paymentMethod,        // NEW
-        selectedBank || null, // NEW
-        paymentProof
-      ];
+      bookingCode, customerName, phoneNumber, serviceId, packageId,
+      bookingDate, timeSlotId || null, faculty || null, university || null, 
+      finalFullPrice,
+      paymentType, 
+      paymentMethod,
+      selectedBank || null,
+      paymentProof,
+      promoCodeId,
+      promoDiscountAmount
+    ];
+
     } else {
       // Fallback for old database schema
       insertQuery = `
-        INSERT INTO bookings (
-          booking_code, customer_name, phone_number, service_id, package_id,
-          booking_date, time_slot_id, faculty, university, total_price,
-          payment_type, payment_proof, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+      INSERT INTO bookings (
+        booking_code, customer_name, phone_number, service_id, package_id,
+        booking_date, time_slot_id, faculty, university, total_price,
+        payment_type, payment_method, selected_bank, payment_proof, 
+        promo_code_id, discount_amount, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
       `;
       insertParams = [
-        bookingCode, customerName, phoneNumber, serviceId, packageId,
-        bookingDate, timeSlotId || null, faculty || null, university || null, 
-        finalFullPrice,
-        paymentType, paymentProof
-      ];
+      bookingCode, customerName, phoneNumber, serviceId, packageId,
+      bookingDate, timeSlotId || null, faculty || null, university || null, 
+      finalFullPrice,
+      paymentType, 
+      paymentMethod,
+      selectedBank || null,
+      paymentProof,
+      promoCodeId,
+      promoDiscountAmount
+    ];
     }
 
     const [result] = await connection.execute(insertQuery, insertParams);
+
+    // Record promo usage
+    if (promoCodeId) {
+      // Update usage count
+      await connection.execute(
+        'UPDATE promo_codes SET used_count = used_count + 1 WHERE id = ?',
+        [promoCodeId]
+      );
+      
+      // Record promo usage
+      await connection.execute(
+        `INSERT INTO promo_usage (
+          promo_code_id, booking_id, customer_phone, discount_amount
+        ) VALUES (?, ?, ?, ?)`,
+        [promoCodeId, result.insertId, phoneNumber, promoDiscountAmount]
+      );
+    }
+
 
     // Update time slot booking relationship
     if (timeSlotId) {
@@ -189,16 +248,16 @@ export const createBooking = async (req, res) => {
     // Send WhatsApp notification (if configured)
     const paymentMethodText = paymentMethod === 'transfer' ? `Transfer Bank (${selectedBank || 'Bank'})` : paymentMethod;
     const whatsappMessage = `
-🎉 *New Booking Alert!*
+    🎉 *New Booking Alert!*
 
-📋 Booking Code: ${bookingCode}
-👤 Customer: ${customerName}
-📱 Phone: ${phoneNumber}
-📅 Date: ${bookingDate}
-💰 Total: Rp ${finalFullPrice.toLocaleString('id-ID')}
-💳 Payment: ${paymentType.replace('_', ' ')} via ${paymentMethodText}
+    📋 Booking Code: ${bookingCode}
+    👤 Customer: ${customerName}
+    📱 Phone: ${phoneNumber}
+    📅 Date: ${bookingDate}
+    💰 Total: Rp ${finalFullPrice.toLocaleString('id-ID')}
+    💳 Payment: ${paymentType.replace('_', ' ')} via ${paymentMethodText}
 
-Please check admin dashboard for details.
+    Please check admin dashboard for details.
     `;
 
     // TODO: Implement WhatsApp notification
@@ -209,6 +268,8 @@ Please check admin dashboard for details.
       message: 'Booking created successfully',
       bookingCode,
       bookingId: result.insertId,
+      originalPrice: calculatedFullPrice,
+      discountAmount: promoDiscountAmount,
       totalPrice: finalFullPrice,
       paidAmount: finalPaidAmount,
       remainingAmount: paymentType === 'down_payment' ? finalFullPrice - finalPaidAmount : 0

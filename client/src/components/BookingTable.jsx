@@ -347,9 +347,21 @@ export default function BookingTable({
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className="font-semibold text-gray-900">
-                        Rp {formatPrice(booking.total_price)}
-                      </span>
+                      <div className="space-y-1">
+                        <p className="font-medium">
+                          Rp {formatPrice(booking.total_price)}
+                        </p>
+                        {booking.discount_amount > 0 && (
+                          <p className="text-xs text-green-600">
+                            -Rp {formatPrice(booking.discount_amount)} (Promo)
+                          </p>
+                        )}
+                        {booking.payment_type === 'down_payment' && (
+                          <Badge variant="outline" className="text-xs">
+                            DP 50%
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(booking.status)}</TableCell>
                     <TableCell>
