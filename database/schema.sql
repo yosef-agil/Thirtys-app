@@ -350,3 +350,157 @@ DROP TABLE IF EXISTS customer_notes;
 DROP INDEX IF EXISTS idx_bookings_customer_name ON bookings;
 DROP INDEX IF EXISTS idx_bookings_phone_number ON bookings;
 DROP INDEX IF EXISTS idx_bookings_customer_combo ON bookings;
+
+
+
+
+
+-- Tambahkan ke schema.sql atau jalankan langsung di Railway MySQL
+
+CREATE TABLE promo_codes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    discount_type ENUM('percentage', 'fixed') NOT NULL,
+    discount_value DECIMAL(10, 2) NOT NULL,
+    service_id INT NULL, -- NULL berarti berlaku untuk semua service
+    usage_limit INT DEFAULT NULL, -- NULL berarti unlimited
+    used_count INT DEFAULT 0,
+    valid_from DATETIME DEFAULT CURRENT_TIMESTAMP,
+    valid_until DATETIME DEFAULT NULL, -- NULL berarti tidak ada expiry
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
+    INDEX idx_promo_code (code),
+    INDEX idx_service_id (service_id)
+);
+
+-- Tabel untuk tracking penggunaan promo per user
+CREATE TABLE promo_usage (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    promo_code_id INT NOT NULL,
+    booking_id INT NOT NULL,
+    customer_phone VARCHAR(20) NOT NULL,
+    discount_amount DECIMAL(10, 2) NOT NULL,
+    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (promo_code_id) REFERENCES promo_codes(id) ON DELETE CASCADE,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    INDEX idx_customer_phone (customer_phone),
+    INDEX idx_promo_booking (promo_code_id, booking_id)
+);
+
+-- Tambah kolom promo_code_id ke tabel bookings
+ALTER TABLE bookings 
+ADD COLUMN promo_code_id INT NULL AFTER payment_method,
+ADD COLUMN discount_amount DECIMAL(10, 2) DEFAULT 0 AFTER promo_code_id,
+ADD FOREIGN KEY (promo_code_id) REFERENCES promo_codes(id) ON DELETE SET NULL;
+
+
+
+
+
+
+
+
+
+-- Check actual usage
+SELECT pc.code, pc.usage_limit, pc.used_count, COUNT(pu.id) as actual_usage
+FROM promo_codes pc
+LEFT JOIN promo_usage pu ON pc.id = pu.promo_code_id
+GROUP BY pc.id;
+
+-- Update used_count to match actual usage
+UPDATE promo_codes pc
+SET used_count = (
+    SELECT COUNT(*) 
+    FROM promo_usage pu 
+    WHERE pu.promo_code_id = pc.id
+)
+WHERE pc.code IN ('WELCOME30', 'TEST1', 'THIRTYONE01');
+
+
+
+
+-- Cek usage count di promo_codes table
+SELECT id, code, usage_limit, used_count 
+FROM promo_codes 
+WHERE code IN ('TEST3', 'TEST2');
+
+-- Cek actual usage di promo_usage table
+SELECT 
+    pc.code, 
+    pc.usage_limit, 
+    pc.used_count,
+    COUNT(pu.id) as actual_usage_count
+FROM promo_codes pc
+LEFT JOIN promo_usage pu ON pc.id = pu.promo_code_id
+WHERE pc.code IN ('TEST3', 'TEST2')
+GROUP BY pc.id;
+
+-- Detail promo usage
+SELECT 
+    pu.*,
+    b.booking_code,
+    b.customer_name
+FROM promo_usage pu
+JOIN bookings b ON pu.booking_id = b.id
+JOIN promo_codes pc ON pu.promo_code_id = pc.id
+WHERE pc.code IN ('TEST3', 'TEST2');
+
+UPDATE promo_codes 
+SET used_count = (
+    SELECT COUNT(*) 
+    FROM promo_usage 
+    WHERE promo_code_id = promo_codes.id
+)
+WHERE code IN ('TEST2', 'TEST3');
+
+
+
+
+-- 1. Check semua promo codes dan actual usage
+SELECT 
+    pc.id,
+    pc.code,
+    pc.usage_limit,
+    pc.used_count as stored_count,
+    COUNT(DISTINCT pu.id) as actual_usage
+FROM promo_codes pc
+LEFT JOIN promo_usage pu ON pc.id = pu.promo_code_id
+GROUP BY pc.id
+ORDER BY pc.id DESC;
+
+-- 2. Fix all promo codes usage count
+UPDATE promo_codes pc
+SET used_count = (
+    SELECT COUNT(DISTINCT pu.id) 
+    FROM promo_usage pu 
+    WHERE pu.promo_code_id = pc.id
+);
+
+-- 3. Verify the fix
+SELECT 
+    code, 
+    usage_limit, 
+    used_count,
+    CONCAT(used_count, '/', IFNULL(usage_limit, '∞')) as display_usage
+FROM promo_codes
+ORDER BY id DESC;
+
+
+
+-- Create trigger untuk auto update used_count
+DELIMITER //
+CREATE TRIGGER update_promo_usage_count 
+AFTER INSERT ON promo_usage
+FOR EACH ROW
+BEGIN
+    UPDATE promo_codes 
+    SET used_count = (
+        SELECT COUNT(*) 
+        FROM promo_usage 
+        WHERE promo_code_id = NEW.promo_code_id
+    )
+    WHERE id = NEW.promo_code_id;
+END//
+DELIMITER ;

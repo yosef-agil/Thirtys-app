@@ -151,6 +151,12 @@ export default function TimeSlotManager() {
   const [bulkCreateOpen, setBulkCreateOpen] = useState(false);
   const { toast } = useToast();
 
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleteForm, setBulkDeleteForm] = useState({
+    start_date: new Date(),
+    end_date: new Date()
+  });
+
   // Form state
   const [slotForm, setSlotForm] = useState({
     start_time: '',
@@ -169,6 +175,54 @@ export default function TimeSlotManager() {
     max_capacity: 1,
     days_of_week: [1, 2, 3, 4, 5] // Monday to Friday
   });
+
+  // bulk delete
+  const handleBulkDelete = async (force = false) => {
+    try {
+      console.log('Sending bulk delete request:', {
+        service_id: selectedService.id,
+        start_date: format(bulkDeleteForm.start_date, 'yyyy-MM-dd'),
+        end_date: format(bulkDeleteForm.end_date, 'yyyy-MM-dd'),
+        force
+      });
+
+      const response = await api.delete('/time-slots/bulk', {
+        data: {
+          service_id: selectedService.id,
+          start_date: format(bulkDeleteForm.start_date, 'yyyy-MM-dd'),
+          end_date: format(bulkDeleteForm.end_date, 'yyyy-MM-dd'),
+          force
+        }
+      });
+
+      if (response.data.success) {
+        toast({
+          title: 'Berhasil',
+          description: response.data.message,
+        });
+        setBulkDeleteOpen(false);
+        loadTimeSlots();
+      }
+    } catch (error) {
+      console.error('Bulk delete error:', error.response || error);
+      
+      if (error.response?.data?.requireForce) {
+        const confirmed = window.confirm(
+          `${error.response.data.bookedSlots} dari ${error.response.data.totalSlots} slot sudah memiliki booking. Yakin ingin menghapus semua?`
+        );
+        
+        if (confirmed) {
+          handleBulkDelete(true);
+        }
+      } else {
+        toast({
+          title: 'Error',
+          description: error.response?.data?.error || 'Gagal menghapus time slots',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
 
   useEffect(() => {
     loadServices();
@@ -404,15 +458,29 @@ const loadTimeSlots = async () => {
               <p className="text-gray-600 mt-1">Manage available time slots for services</p>
             </div>
             
-            <Button
-              onClick={() => setBulkCreateOpen(true)}
-              disabled={!selectedService}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-200"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Bulk Create Slots
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setBulkCreateOpen(true)}
+                disabled={!selectedService}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-200"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Bulk Create Slots
+              </Button>
+
+              <Button
+                onClick={() => setBulkDeleteOpen(true)}
+                disabled={!selectedService}
+                variant="destructive"
+                className="rounded-xl shadow-lg"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Bulk Delete Slots
+              </Button>
+            </div>
           </div>
+
+
         </CardContent>
       </Card>
 
@@ -757,6 +825,75 @@ const loadTimeSlots = async () => {
         </DialogContent>
       </Dialog>
 
+        {/* Bulk Delete Dialog - HARUS DI LUAR BULK CREATE DIALOG */}
+        <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertCircle className="h-5 w-5" />
+                Hapus Time Slots Masal
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 mt-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-700">
+                  Peringatan: Tindakan ini akan menghapus semua time slots pada rentang tanggal yang dipilih.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Tanggal Mulai</Label>
+                  <Input
+                    type="date"
+                    value={format(bulkDeleteForm.start_date, 'yyyy-MM-dd')}
+                    onChange={(e) => setBulkDeleteForm({
+                      ...bulkDeleteForm, 
+                      start_date: new Date(e.target.value)
+                    })}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Tanggal Akhir</Label>
+                  <Input
+                    type="date"
+                    value={format(bulkDeleteForm.end_date, 'yyyy-MM-dd')}
+                    onChange={(e) => setBulkDeleteForm({
+                      ...bulkDeleteForm, 
+                      end_date: new Date(e.target.value)
+                    })}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-600 space-y-1">
+                <p>Service: <span className="font-medium">{selectedService?.name}</span></p>
+                <p>Range: {format(bulkDeleteForm.start_date, 'dd MMM yyyy')} - {format(bulkDeleteForm.end_date, 'dd MMM yyyy')}</p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setBulkDeleteOpen(false)}
+                  className="flex-1 rounded-xl"
+                >
+                  Batal
+                </Button>
+                <Button 
+                  onClick={() => handleBulkDelete(false)}
+                  variant="destructive"
+                  className="flex-1 rounded-xl"
+                >
+                  Hapus Time Slots
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
