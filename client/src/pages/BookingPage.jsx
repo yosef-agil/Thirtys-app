@@ -196,7 +196,9 @@ const TimeSlotGrid = ({ slots, selected, onSelect }) => {
             )}
           >
             <div className="text-center">
-              <p className="font-semibold">{slot.start_time}</p>
+              <p className="font-semibold">
+                {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+              </p>
               <p className="text-xs mt-0.5 sm:mt-1 opacity-75">
                 {isAvailable ? `${availableSlots} slots left` : 'Fully booked'}
               </p>
