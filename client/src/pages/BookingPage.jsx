@@ -437,6 +437,7 @@ export default function BookingPage() {
     setValue,
     formState: { errors },
     trigger,
+    clearErrors,
   } = useForm({
     resolver: zodResolver(createBookingSchema(isGraduationPhotography)),
   });
@@ -652,9 +653,40 @@ const handleNext = async () => {
       break;
     case 4:
       fieldsToValidate = ['paymentType', 'paymentMethod'];
-      // Payment proof required for QRIS and transfer
-      if (watch('paymentMethod') === 'transfer' || watch('paymentMethod') === 'qris') {
-        fieldsToValidate.push('paymentProof');
+      
+      // Manual validation for payment proof
+      const paymentMethod = watch('paymentMethod');
+      const paymentProof = watch('paymentProof');
+      
+      if ((paymentMethod === 'transfer' || paymentMethod === 'qris')) {
+        if (!paymentProof || paymentProof.length === 0) {
+          toast({
+            title: 'Payment Proof Required',
+            description: 'Please upload payment proof for your transaction',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        // Validate file size and type
+        const file = paymentProof[0];
+        if (file.size > 5000000) {
+          toast({
+            title: 'File too large',
+            description: 'File size must be less than 5MB',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+          toast({
+            title: 'Invalid file type',
+            description: 'Only JPG, JPEG & PNG files are accepted',
+            variant: 'destructive',
+          });
+          return;
+        }
       }
       break;
   }

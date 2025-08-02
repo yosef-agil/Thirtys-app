@@ -12,12 +12,17 @@ export const bookingService = {
     return response.data;
   },
   
-  getTimeSlots: async (serviceId, date) => {
-    // Gunakan endpoint yang konsisten
-    const response = await api.get('/time-slots', {
-      params: { serviceId, date }
-    });
-    return response.data;
+getTimeSlots: async (serviceId, date) => {
+    try {
+      // Use public endpoint for booking page
+      const response = await api.get('/time-slots/public', {
+        params: { serviceId, date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching time slots:', error);
+      return [];
+    }
   },
   
   createBooking: async (formData) => {

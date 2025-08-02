@@ -116,24 +116,40 @@ export default function BookingTable({
   const isAllSelected = bookings.length > 0 && selectedBookings.length === bookings.length;
 
   // Convert booking data to invoice format
-  const convertToInvoiceData = (booking) => {
-    if (!booking) return null;
+const convertToInvoiceData = (booking) => {
+  if (!booking) return null;
 
-    return {
-      inv_id: formatBookingCode(booking),
-      customer: booking.customer_name,
-      due_date: booking.booking_date,
-      discount: 0,
-      downpayment: booking.payment_type === 'down_payment' ? booking.total_price * 0.5 : 0,
-      note: `${booking.service_name} - ${booking.package_name}${booking.faculty ? ` | ${booking.faculty} - ${booking.university}` : ''}`,
-      items: [
-        {
-          description: `${booking.service_name} - ${booking.package_name}`,
-          price: booking.total_price.toString(),
-        }
-      ]
-    };
+  // Debug log
+  console.log('Booking data in convertToInvoiceData:', booking);
+
+  return {
+    inv_id: formatBookingCode(booking),
+    customer: booking.customer_name,
+    phone_number: booking.phone_number, // Tambahkan field ini
+    phone: booking.phone_number, // Tambahkan backup field
+    due_date: booking.booking_date,
+    booking_date: booking.booking_date,
+    service_name: booking.service_name,
+    package_name: booking.package_name,
+    total_price: booking.total_price,
+    discount_amount: booking.discount_amount || 0,
+    payment_type: booking.payment_type,
+    payment_method: booking.payment_method,
+    faculty: booking.faculty,
+    university: booking.university,
+    // Calculate discount percentage if there's a discount
+    discount: booking.discount_amount > 0 ? 
+      Math.round((booking.discount_amount / (parseFloat(booking.total_price) + parseFloat(booking.discount_amount || 0))) * 100) : 0,
+    downpayment: booking.payment_type === 'down_payment' ? booking.total_price : 0,
+    note: `${booking.service_name} - ${booking.package_name}${booking.faculty ? ` | ${booking.faculty} - ${booking.university}` : ''}`,
+    items: [
+      {
+        description: `${booking.service_name} - ${booking.package_name}`,
+        price: (parseFloat(booking.total_price) + parseFloat(booking.discount_amount || 0)).toString(),
+      }
+    ]
   };
+};
 
   const updateBookingStatus = async (bookingId, newStatus) => {
     try {

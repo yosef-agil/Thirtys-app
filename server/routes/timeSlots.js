@@ -40,6 +40,41 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// ✅ GET time slots for PUBLIC BOOKING (tanpa auth)
+router.get('/public', async (req, res) => {
+  try {
+    const serviceId = parseInt(req.query.serviceId, 10);
+    const { date } = req.query;
+
+    if (!serviceId || isNaN(serviceId)) {
+      console.warn('Missing or invalid serviceId for GET /api/time-slots/public');
+      return res.status(200).json([]);
+    }
+
+    let query = `
+      SELECT
+        ts.*,
+        (SELECT COUNT(*) FROM time_slot_bookings WHERE time_slot_id = ts.id) as current_bookings
+      FROM time_slots ts
+      WHERE ts.service_id = ?
+    `;
+    const params = [serviceId];
+
+    if (date) {
+      query += ' AND ts.date = ?';
+      params.push(date);
+    }
+
+    query += ' ORDER BY ts.date, ts.start_time';
+
+    const [slots] = await pool.execute(query, params);
+    res.json(slots);
+  } catch (error) {
+    console.error('Error fetching public time slots:', error);
+    res.status(500).json({ error: 'Failed to fetch time slots' });
+  }
+});
+
 // ✅ CREATE time slot
 router.post('/', authenticateToken, async (req, res) => {
   try {
