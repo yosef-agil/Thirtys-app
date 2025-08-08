@@ -179,12 +179,6 @@ export default function TimeSlotManager() {
   // bulk delete
   const handleBulkDelete = async (force = false) => {
     try {
-      console.log('Sending bulk delete request:', {
-        service_id: selectedService.id,
-        start_date: format(bulkDeleteForm.start_date, 'yyyy-MM-dd'),
-        end_date: format(bulkDeleteForm.end_date, 'yyyy-MM-dd'),
-        force
-      });
 
       const response = await api.delete('/time-slots/bulk', {
         data: {
@@ -204,7 +198,6 @@ export default function TimeSlotManager() {
         loadTimeSlots();
       }
     } catch (error) {
-      console.error('Bulk delete error:', error.response || error);
       
       if (error.response?.data?.requireForce) {
         const confirmed = window.confirm(
@@ -238,7 +231,6 @@ export default function TimeSlotManager() {
     try {
       setLoading(true);
       const response = await api.get('/services');
-      console.log('Services response:', response.data); // Debug log
       
       // Ensure we have an array
       let servicesData = [];
@@ -249,8 +241,7 @@ export default function TimeSlotManager() {
         servicesData = Object.values(response.data);
       }
       
-      const servicesWithTimeSlots = servicesData.filter(s => s && s.has_time_slots === 1);
-      console.log('Services with time slots:', servicesWithTimeSlots); // Debug log
+      const servicesWithTimeSlots = servicesData.filter(s => s && s.has_time_slots === 1); 
       
       setServices(servicesWithTimeSlots);
       
@@ -258,7 +249,6 @@ export default function TimeSlotManager() {
         setSelectedService(servicesWithTimeSlots[0]);
       }
     } catch (error) {
-      console.error('Error loading services:', error);
       toast({
         title: 'Error',
         description: 'Failed to load services',

@@ -140,20 +140,20 @@ const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, s
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium text-gray-900">{pkg.package_name}</p>
-                    <p className="text-sm text-gray-500 mt-0.5">{pkg.description}</p>
+                    <p className="text-sm text-gray-500 mt-0.5 w-40 md:w-72 lg:w-96">{pkg.description}</p>
                   </div>
-                  <div className="text-right ml-4">
+                  <div className="text-right ml-4 ">
                     {service.discount_percentage > 0 ? (
                       <div>
                         <p className="text-lg font-bold text-blue-600">
                           Rp {formatPrice(pkg.price * (1 - service.discount_percentage / 100))}
                         </p>
-                        <p className="text-ss text-gray-400 line-through">
+                        <p className="text-ss md:text-base lg:text-lg text-gray-400 line-through">
                           Rp {formatPrice(pkg.price)}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-lg font-bold text-gray-900">
+                      <p className="text-xs md:text-base lg:text-lg font-bold text-gray-900">
                         Rp {formatPrice(pkg.price)}
                       </p>
                     )}
@@ -172,6 +172,7 @@ const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, s
 };
 
 // Time Slot Selection
+// Update TimeSlotGrid component di BookingPage.jsx:
 const TimeSlotGrid = ({ slots, selected, onSelect }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
@@ -180,15 +181,19 @@ const TimeSlotGrid = ({ slots, selected, onSelect }) => {
         const availableSlots = slot.max_capacity - (slot.current_bookings || 0);
         const isAvailable = availableSlots > 0;
         
+        // Ensure consistent ID comparison (convert both to string)
+        const slotId = slot.id.toString();
+        const isSelected = selected === slotId;
+        
         return (
           <button
             key={slot.id}
             type="button"
-            onClick={() => isAvailable && onSelect(slot.id.toString())}
+            onClick={() => isAvailable && onSelect(slotId)}
             disabled={!isAvailable}
             className={cn(
               "p-2.5 sm:p-3 rounded-lg sm:rounded-xl border text-xs sm:text-sm font-medium transition-all duration-200",
-              selected === slot.id.toString()
+              isSelected
                 ? "border-blue-500 bg-blue-50 text-blue-700"
                 : isAvailable
                   ? "border-gray-200 hover:border-gray-300 text-gray-700 bg-white"
@@ -493,22 +498,13 @@ const validatePromoCode = async () => {
 
   setIsValidatingPromo(true);
   try {
-    // Debug log
-    console.log('Validating promo code:', {
-      code: promoCode,
-      service_id: watchService,
-      phone_number: watch('phoneNumber'),
-      booking_date: watch('bookingDate') // Add booking date
-    });
 
     const response = await api.post('/promo-codes/validate', {
       code: promoCode.toUpperCase(),
       service_id: watchService,
       phone_number: watch('phoneNumber'),
-      booking_date: watch('bookingDate') ? format(watch('bookingDate'), 'yyyy-MM-dd') : null // Send booking date
+      booking_date: watch('bookingDate') ? format(watch('bookingDate'), 'yyyy-MM-dd') : null
     });
-
-    console.log('Promo validation response:', response.data);
 
     if (response.data.success) {
       setPromoValidation({
@@ -522,7 +518,6 @@ const validatePromoCode = async () => {
       });
     }
   } catch (error) {
-    console.error('Promo validation error:', error.response?.data);
     setPromoValidation({
       valid: false,
       message: error.response?.data?.error || 'Invalid promo code'
@@ -623,11 +618,8 @@ const validatePromoCode = async () => {
     try {
       const data = await bookingService.getTimeSlots(serviceId, date);
       
-      // Data should include max_capacity and current_bookings for each slot
-      console.log('Time slots loaded:', data);
       setTimeSlots(data);
     } catch (error) {
-      console.error('Failed to load time slots:', error);
       setTimeSlots([]);
     }
   };
@@ -750,7 +742,7 @@ const handleNext = async () => {
           setShowThankYou(true);
         }
         } catch (error) {
-          console.error('Booking error:', error);
+
           toast({
             title: 'Error',
             description: error.message || 'Failed to create booking',
@@ -772,13 +764,13 @@ const handleNext = async () => {
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => window.location.href = 'https://thirtyonestudio.webflow.io/'}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
               <span className="text-sm font-medium">Back</span>
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Thirtys Studio</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Thirtyone Studio</h1>
             <div className="w-16" />
           </div>
         </div>
@@ -916,7 +908,14 @@ const handleNext = async () => {
                         mode="single"
                         selected={watchDate}
                         onSelect={(date) => setValue('bookingDate', date)}
-                        disabled={(date) => date < new Date()}
+                        disabled={(date) => {
+                          // Set today at midnight (00:00:00)
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          
+                          // Only disable dates before today
+                          return date < today;
+                        }}
                         className="rounded-md w-full"
                       />
                     </div>
