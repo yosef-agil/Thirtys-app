@@ -408,8 +408,8 @@ export default function BookingPage() {
   const steps = 4;
 
   const bankAccounts = [
-    { bank: 'BCA', number: '580201024795533', name: 'Nadhita Crisya' },
-    { bank: 'BRI', number: '0132189968', name: 'Nadhita Crisya' },
+    { bank: 'BCA', number: '0132189968', name: 'Nadhita Crisya' },
+    { bank: 'BRI', number: '580201024795533', name: 'Nadhita Crisya' },
     { bank: 'JAGO', number: '102328996443', name: 'Yosef Agil' },
   ];
 
@@ -1241,7 +1241,7 @@ const handleNext = async () => {
                     </div>
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                       <p className="text-sm text-amber-800">
-                        Harap untuk menyimpan bukti pembayaran
+                        Screenshoot dan upload bukti pembayaran dibawah ini
                       </p>
                     </div>
                   </div>
