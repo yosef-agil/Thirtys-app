@@ -143,18 +143,18 @@ const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, s
                     <p className="font-medium text-gray-900">{pkg.package_name}</p>
                     <p className="text-sm text-gray-500 mt-0.5 max-w-sm">{pkg.description}</p>
                   </div>
-                  <div className="text-right ml-4 ">
+                  <div className="text-right ml-4">
                     {service.discount_percentage > 0 ? (
                       <div>
-                        <p className="text-lg font-bold text-blue-600">
+                        <p className="text-base sm:text-lg lg:text-xl font-bold text-blue-600">
                           Rp {formatPrice(pkg.price * (1 - service.discount_percentage / 100))}
                         </p>
-                        <p className="text-ss md:text-base lg:text-lg text-gray-400 line-through">
+                        <p className="text-xs sm:text-sm text-gray-400 line-through">
                           Rp {formatPrice(pkg.price)}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-xs md:text-base lg:text-lg font-bold text-gray-900">
+                      <p className="text-base sm:text-lg lg:text-xl font-bold text-gray-900">
                         Rp {formatPrice(pkg.price)}
                       </p>
                     )}
