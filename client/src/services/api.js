@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const API_URL = import.meta.env.PROD 
-  ? 'https://thirtys-code-production.up.railway.app/api'
+  ? 'https://thirtyonestudio.up.railway.app/api'
   : '/api'; // Use proxy in development
 
 const api = axios.create({

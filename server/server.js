@@ -32,7 +32,7 @@ app.use(cors({
   origin: [
     'http://localhost:5173',
     'http://localhost:3000', 
-    'https://thirtys-code-production.up.railway.app'
+    'https://thirtyonestudio.up.railway.app/'
   ],
   credentials: true
 }));
