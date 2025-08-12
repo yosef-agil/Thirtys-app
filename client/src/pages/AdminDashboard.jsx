@@ -37,6 +37,7 @@ import api from '../services/api';
 import * as XLSX from 'xlsx';
 import { cn } from '@/lib/utils';
 import PromoCodeManager from '../components/PromoCodeManager';
+import { trackEvent } from '../lib/utils/analytics';
 
 // Utility function untuk format harga
 const formatPrice = (price) => {
@@ -238,6 +239,10 @@ export default function AdminDashboard() {
     checkAuthAndLoadData();
   }, []);
 
+  useEffect(() => {
+  trackEvent('Admin', 'dashboard_accessed');
+  }, []);
+
   const loadDashboardData = async () => {
     try {
       setError(null);
@@ -249,8 +254,12 @@ export default function AdminDashboard() {
       
       setStats(statsRes.data);
       setBookings(bookingsRes.data);
+
+      trackEvent('Admin', 'dashboard_loaded', 'bookings_count', bookingsRes.data.length);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
+
+      trackEvent('Admin', 'dashboard_error', error.message);
       
       if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem('token');
@@ -302,6 +311,7 @@ export default function AdminDashboard() {
     }
 
     try {
+      trackEvent('Admin', `bulk_${action}`, 'count', selectedBookings.length);
       if (action === 'confirm') {
         await Promise.all(
           selectedBookings.map(id => 
@@ -340,6 +350,7 @@ export default function AdminDashboard() {
 
   // Export functions
   const exportToExcel = () => {
+    trackEvent('Admin', 'export_excel', 'count', filteredBookings.length);
     const dataToExport = filteredBookings.map(booking => ({
       'Booking Code': `THIRTY${String(booking.id).padStart(3, '0')}`,
       'Customer Name': booking.customer_name,
@@ -370,6 +381,7 @@ export default function AdminDashboard() {
   };
 
   const exportToCSV = () => {
+    trackEvent('Admin', 'export_csv', 'count', filteredBookings.length);
     const dataToExport = filteredBookings.map(booking => ({
       'Booking Code': `THIRTY${String(booking.id).padStart(3, '0')}`,
       'Customer Name': booking.customer_name,
@@ -404,6 +416,24 @@ export default function AdminDashboard() {
       description: 'Bookings exported to CSV',
     });
   };
+
+  useEffect(() => {
+  if (searchQuery) {
+    trackEvent('Admin', 'search_used', searchQuery);
+  }
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (selectedService !== 'all') {
+      trackEvent('Admin', 'filter_service', selectedService);
+    }
+  }, [selectedService]);
+
+  useEffect(() => {
+    if (selectedStatus !== 'all') {
+      trackEvent('Admin', 'filter_status', selectedStatus);
+    }
+  }, [selectedStatus]);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -577,7 +607,7 @@ export default function AdminDashboard() {
         )}
         
         {/* Tabs */}
-        <Tabs defaultValue="bookings" className="space-y-4">
+        <Tabs defaultValue="bookings" className="space-y-4" onValueChange={(value) => {trackEvent('Admin', 'tab_changed', value);}}>
           <TabsList className="bg-white border border-gray-200 p-1 rounded-xl">
             <TabsTrigger 
               value="bookings" 

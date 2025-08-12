@@ -56,6 +56,7 @@ import PDFInvoice from './PDFInvoice';
 import api from '../services/api';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { trackEvent } from '../lib/utils/analytics';
 
 // Utility function untuk format harga
 const formatPrice = (price) => {
@@ -154,6 +155,7 @@ const convertToInvoiceData = (booking) => {
   const updateBookingStatus = async (bookingId, newStatus) => {
     try {
       await api.patch(`/bookings/${bookingId}/status`, { status: newStatus });
+      trackEvent('Admin', 'booking_status_updated', newStatus);
       toast({
         title: 'Success',
         description: 'Booking status updated',
@@ -177,6 +179,7 @@ const convertToInvoiceData = (booking) => {
     if (!bookingToDelete) return;
     
     try {
+      trackEvent('Admin', 'booking_deleted', bookingToDelete.service_name);
       await api.delete(`/bookings/${bookingToDelete.id}`);
       toast({
         title: 'Success',
@@ -213,6 +216,7 @@ const convertToInvoiceData = (booking) => {
   };
 
   const openDetails = (booking) => {
+    trackEvent('Admin', 'booking_details_viewed', booking.service_name);
     setSelectedBooking(booking);
     setDetailsOpen(true);
   };
@@ -560,6 +564,9 @@ const convertToInvoiceData = (booking) => {
                 <PDFDownloadLink
                   document={<PDFInvoice invoice={convertToInvoiceData(selectedBooking)} />}
                   fileName={`Invoice-${formatBookingCode(selectedBooking)}.pdf`}
+                  onClick={() => {
+                    trackEvent('Admin', 'invoice_downloaded', formatBookingCode(selectedBooking));
+                  }}
                 >
                   {({ blob, url, loading, error }) => (
                     <Button 
@@ -668,35 +675,69 @@ const convertToInvoiceData = (booking) => {
               </Card>
 
               {/* Payment Proof */}
-              {selectedBooking.payment_proof && (
-                <Card className="border-0 shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold text-gray-900">
-                      Payment Proof
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50">
-                      <img
-                        src={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
-                        alt="Payment Proof"
-                        className="max-w-full h-auto max-h-96 rounded-lg mx-auto block"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextElementSibling.style.display = 'flex';
-                        }}
-                      />
-                      <div className="hidden flex-col items-center justify-center py-12 text-center">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                          <FileText className="h-8 w-8 text-gray-400" />
+                {selectedBooking.payment_proof && (
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base font-semibold text-gray-900">
+                        Payment Proof
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50">
+                        {selectedBooking.payment_proof.startsWith('http') ? (
+                          // For Cloudinary URLs
+                          <a 
+                            href={selectedBooking.payment_proof} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <img
+                              src={selectedBooking.payment_proof}
+                              alt="Payment Proof"
+                              className="max-w-full h-auto max-h-96 rounded-lg mx-auto block cursor-pointer hover:opacity-90 transition-opacity"
+                              loading="lazy"
+                              onError={(e) => {
+                                console.error('Failed to load image:', selectedBooking.payment_proof);
+                                e.target.style.display = 'none';
+                                e.target.parentElement.nextElementSibling.style.display = 'flex';
+                              }}
+                            />
+                          </a>
+                        ) : (
+                          // For local files (backward compatibility)
+                          <img
+                            src={`https://thirtys-code-production.up.railway.app/uploads/${selectedBooking.payment_proof}`}
+                            alt="Payment Proof"
+                            className="max-w-full h-auto max-h-96 rounded-lg mx-auto block"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                        )}
+                        
+                        <div className="hidden flex-col items-center justify-center py-12 text-center">
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <FileText className="h-8 w-8 text-gray-400" />
+                          </div>
+                          <p className="text-gray-500 mb-2">Unable to load payment proof</p>
+                          <a 
+                            href={selectedBooking.payment_proof} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-700 underline mt-2"
+                          >
+                            Open in new tab
+                          </a>
+                          <p className="text-xs text-gray-400 mt-2 break-all max-w-md">
+                            {selectedBooking.payment_proof}
+                          </p>
                         </div>
-                        <p className="text-gray-500 mb-2">Payment proof not available</p>
-                        <p className="text-sm text-gray-400">File: {selectedBooking.payment_proof}</p>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                    </CardContent>
+                  </Card>
+                )}
 
               {/* Timestamps */}
               <Card className="border-0 shadow-sm bg-gray-50">

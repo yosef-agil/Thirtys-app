@@ -12,6 +12,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { trackEvent, trackBooking, trackFormStep } from '../lib/utils/analytics';
 import { 
   Copy, 
   Check, 
@@ -140,7 +141,7 @@ const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, s
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium text-gray-900">{pkg.package_name}</p>
-                    <p className="text-sm text-gray-500 mt-0.5 w-40 md:w-72 lg:w-96">{pkg.description}</p>
+                    <p className="text-sm text-gray-500 mt-0.5 max-w-sm">{pkg.description}</p>
                   </div>
                   <div className="text-right ml-4 ">
                     {service.discount_percentage > 0 ? (
@@ -477,6 +478,21 @@ export default function BookingPage() {
     }
   }, [watchService, services]);
 
+  useEffect(() => {
+  if (watchService && selectedService) {
+    trackEvent('Engagement', 'service_selected', selectedService.name);
+  }
+  }, [watchService, selectedService]);
+
+  useEffect(() => {
+  if (watchPackage) {
+    const pkg = packages.find(p => p.id.toString() === watchPackage);
+    if (pkg) {
+      trackEvent('Engagement', 'package_selected', pkg.package_name, pkg.price);
+    }
+  }
+  }, [watchPackage, packages]);
+
   const loadPackagesForService = async (serviceId) => {
     try {
       const packages = await bookingService.getPackagesByService(serviceId);
@@ -626,6 +642,8 @@ const validatePromoCode = async () => {
 
 const handleNext = async () => {
   let fieldsToValidate = [];
+
+  trackFormStep(currentStep, 'booking_form');
   
   switch (currentStep) {
     case 1:
@@ -738,6 +756,15 @@ const handleNext = async () => {
             packageName: packages.find(p => p.id.toString() === data.packageId)?.package_name,
             totalAmount: totalPrice.paymentAmount
           };
+
+          trackBooking({
+            serviceName: selectedService?.name,
+            packageName: packages.find(p => p.id.toString() === data.packageId)?.package_name,
+            totalAmount: totalPrice.paymentAmount,
+            paymentType: data.paymentType,
+            paymentMethod: data.paymentMethod
+          });
+          trackEvent('Conversion', 'booking_completed', selectedService?.name, totalPrice.paymentAmount);
           setBookingDetails(details);
           setShowThankYou(true);
         }
@@ -748,6 +775,8 @@ const handleNext = async () => {
             description: error.message || 'Failed to create booking',
             variant: 'destructive',
           });
+
+          trackEvent('Error', 'booking_failed', error.message);
         } finally {
           setLoading(false);
         }

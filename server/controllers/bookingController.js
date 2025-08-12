@@ -1,5 +1,6 @@
 import db from '../config/database.js';
 import crypto from 'crypto';
+import { uploadCloud } from '../config/cloudinary.js';
 
 const generateBookingCode = () => {
   return 'BK' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(2).toString('hex').toUpperCase();
@@ -10,10 +11,6 @@ export const createBooking = async (req, res) => {
   
   try {
     await connection.beginTransaction();
-
-    // Debug log
-    console.log('Request body:', req.body);
-    console.log('Request file:', req.file);
 
     const {
       customerName,
@@ -42,13 +39,13 @@ export const createBooking = async (req, res) => {
       throw new Error('Invalid payment method');
     }
 
-    // Validate bank selection for transfer payments
-    if (paymentMethod === 'transfer' && !req.file) {
-      throw new Error('Payment proof required for bank transfer');
+    // Validate payment proof for non-cash payments
+    if ((paymentMethod === 'transfer' || paymentMethod === 'qris') && !req.file) {
+      throw new Error('Payment proof required for this payment method');
     }
 
     const bookingCode = generateBookingCode();
-    const paymentProof = req.file ? req.file.filename : null;
+    const paymentProofUrl = req.file ? req.file.path : null;
 
     // Calculate full package price (for verification and fallback)
     const [packageData] = await connection.execute(
@@ -150,47 +147,40 @@ export const createBooking = async (req, res) => {
 
     if (hasPaymentMethodColumn) {
       insertQuery = `
-      INSERT INTO bookings (
-        booking_code, customer_name, phone_number, service_id, package_id,
-        booking_date, time_slot_id, faculty, university, total_price,
-        payment_type, payment_method, selected_bank, payment_proof, 
-        promo_code_id, discount_amount, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+        INSERT INTO bookings (
+          booking_code, customer_name, phone_number, service_id, package_id,
+          booking_date, time_slot_id, faculty, university, total_price,
+          payment_type, payment_method, selected_bank, payment_proof, 
+          promo_code_id, discount_amount, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
       `;
       insertParams = [
-      bookingCode, customerName, phoneNumber, serviceId, packageId,
-      bookingDate, timeSlotId || null, faculty || null, university || null, 
-      finalFullPrice,
-      paymentType, 
-      paymentMethod,
-      selectedBank || null,
-      paymentProof,
-      promoCodeId,
-      promoDiscountAmount
-    ];
-
+        bookingCode, customerName, phoneNumber, serviceId, packageId,
+        bookingDate, timeSlotId || null, faculty || null, university || null, 
+        finalFullPrice,
+        paymentType, 
+        paymentMethod,
+        selectedBank || null,
+        paymentProofUrl, // Use paymentProofUrl not paymentProof
+        promoCodeId,
+        promoDiscountAmount
+      ];
     } else {
       // Fallback for old database schema
       insertQuery = `
-      INSERT INTO bookings (
-        booking_code, customer_name, phone_number, service_id, package_id,
-        booking_date, time_slot_id, faculty, university, total_price,
-        payment_type, payment_method, selected_bank, payment_proof, 
-        promo_code_id, discount_amount, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+        INSERT INTO bookings (
+          booking_code, customer_name, phone_number, service_id, package_id,
+          booking_date, time_slot_id, faculty, university, total_price,
+          payment_type, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
       `;
       insertParams = [
-      bookingCode, customerName, phoneNumber, serviceId, packageId,
-      bookingDate, timeSlotId || null, faculty || null, university || null, 
-      finalFullPrice,
-      paymentType, 
-      paymentMethod,
-      selectedBank || null,
-      paymentProof,
-      promoCodeId,
-      promoDiscountAmount
-    ];
-    }
+        bookingCode, customerName, phoneNumber, serviceId, packageId,
+        bookingDate, timeSlotId || null, faculty || null, university || null, 
+        finalFullPrice,
+        paymentType
+      ];
+    } 
 
     const [result] = await connection.execute(insertQuery, insertParams);
 
@@ -214,13 +204,11 @@ export const createBooking = async (req, res) => {
 
     // Update time slot booking relationship
     if (timeSlotId) {
-      // Insert into junction table
       await connection.execute(
         'INSERT INTO time_slot_bookings (time_slot_id, booking_id) VALUES (?, ?)',
         [timeSlotId, result.insertId]
       );
 
-      // Check if slot is now full and update is_booked flag
       const [slotStatus] = await connection.execute(`
         SELECT 
           ts.max_capacity,
@@ -245,24 +233,6 @@ export const createBooking = async (req, res) => {
 
     await connection.commit();
 
-    // Send WhatsApp notification (if configured)
-    const paymentMethodText = paymentMethod === 'transfer' ? `Transfer Bank (${selectedBank || 'Bank'})` : paymentMethod;
-    const whatsappMessage = `
-    🎉 *New Booking Alert!*
-
-    📋 Booking Code: ${bookingCode}
-    👤 Customer: ${customerName}
-    📱 Phone: ${phoneNumber}
-    📅 Date: ${bookingDate}
-    💰 Total: Rp ${finalFullPrice.toLocaleString('id-ID')}
-    💳 Payment: ${paymentType.replace('_', ' ')} via ${paymentMethodText}
-
-    Please check admin dashboard for details.
-    `;
-
-    // TODO: Implement WhatsApp notification
-    // await whatsappService.sendMessage(adminPhoneNumber, whatsappMessage);
-
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
@@ -272,7 +242,8 @@ export const createBooking = async (req, res) => {
       discountAmount: promoDiscountAmount,
       totalPrice: finalFullPrice,
       paidAmount: finalPaidAmount,
-      remainingAmount: paymentType === 'down_payment' ? finalFullPrice - finalPaidAmount : 0
+      remainingAmount: paymentType === 'down_payment' ? finalFullPrice - finalPaidAmount : 0,
+      paymentProofUrl
     });
 
   } catch (error) {
@@ -562,6 +533,3 @@ export const getBookingsWithPagination = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
-// Update routes in bookings.js to include:
-// router.get('/paginated', authenticateToken, requireAdmin, getBookingsWithPagination);
