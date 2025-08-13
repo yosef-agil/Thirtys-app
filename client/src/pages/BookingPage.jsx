@@ -76,36 +76,37 @@ const ModernProgress = ({ currentStep, totalSteps }) => {
 };
 
 // Service Selection Card
+// Service Selection Card - Optimized for Mobile
 const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, selectedPackageId }) => {
   return (
     <div className="mb-4">
       <div
         className={cn(
-          "p-6 rounded-2xl border cursor-pointer transition-all duration-300 bg-white",
+          "p-4 sm:p-6 rounded-2xl border cursor-pointer transition-all duration-300 bg-white",
           selected 
             ? "border-blue-500 shadow-lg shadow-blue-100" 
             : "border-gray-100 hover:border-gray-200 hover:shadow-md"
         )}
         onClick={() => onSelect(service.id.toString())}
       >
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <h4 className="text-lg font-semibold text-gray-900 mb-1">{service.name}</h4>
-            <p className="text-sm text-gray-500 mb-3">{service.description}</p>
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">{service.name}</h4>
+            <p className="text-xs sm:text-sm text-gray-500 mb-2 sm:mb-3 line-clamp-2">{service.description}</p>
             {service.has_time_slots && (
-              <div className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full">
-                <Clock className="h-3.5 w-3.5" />
-                Time slot booking
+              <div className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-gray-600 bg-gray-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full whitespace-nowrap">
+                <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                <span>Time slot booking</span>
               </div>
             )}
           </div>
-          <div className="text-right ml-4">
-            <p className="text-xs text-gray-500 mb-1">Starting from</p>
-            <p className="text-xl font-bold text-gray-900">
+          <div className="text-right flex-shrink-0">
+            <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1">Starting from</p>
+            <p className="text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">
               Rp {formatPrice(service.base_price)}
             </p>
             {service.discount_percentage > 0 && (
-              <Badge className="mt-2 bg-emerald-50 text-emerald-700 border-0">
+              <Badge className="mt-1 sm:mt-2 bg-emerald-50 text-emerald-700 border-0 text-[10px] sm:text-xs">
                 {service.discount_percentage}% OFF
               </Badge>
             )}
@@ -113,16 +114,16 @@ const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, s
         </div>
       </div>
       
-      {/* Package Selection */}
+      {/* Package Selection - Optimized */}
       {selected && packages.length > 0 && (
-        <div className="mt-4 pl-4 border-l-2 border-blue-100 ml-3 animate-in slide-in-from-top duration-300">
-          <p className="text-sm font-medium text-gray-700 mb-3">Choose your package</p>
-          <div className="grid gap-3">
+        <div className="mt-3 sm:mt-4 pl-3 sm:pl-4 border-l-2 border-blue-100 ml-2 sm:ml-3 animate-in slide-in-from-top duration-300">
+          <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">Choose your package</p>
+          <div className="grid gap-2 sm:gap-3">
             {packages.map(pkg => (
               <label
                 key={pkg.id}
                 className={cn(
-                  "relative p-4 rounded-xl border cursor-pointer transition-all duration-200",
+                  "relative p-3 sm:p-4 rounded-lg sm:rounded-xl border cursor-pointer transition-all duration-200",
                   selectedPackageId === pkg.id.toString()
                     ? "border-blue-500 bg-blue-50"
                     : "border-gray-200 hover:border-gray-300 bg-white"
@@ -138,30 +139,31 @@ const ServiceCard = ({ service, selected, onSelect, packages, onPackageSelect, s
                   value={pkg.id}
                   className="sr-only"
                 />
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-gray-900">{pkg.package_name}</p>
-                    <p className="text-sm text-gray-500 mt-0.5 max-w-sm">{pkg.description}</p>
-                  </div>
-                  <div className="text-right ml-4">
-                    {service.discount_percentage > 0 ? (
-                      <div>
-                        <p className="text-base sm:text-lg lg:text-xl font-bold text-blue-600">
-                          Rp {formatPrice(pkg.price * (1 - service.discount_percentage / 100))}
-                        </p>
-                        <p className="text-xs sm:text-sm text-gray-400 line-through">
-                          Rp {formatPrice(pkg.price)}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-base sm:text-lg lg:text-xl font-bold text-gray-900">
+                <div className="pr-20 sm:pr-24">
+                  <p className="font-medium text-sm sm:text-base text-gray-900">{pkg.package_name}</p>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5 leading-relaxed">{pkg.description}</p>
+                </div>
+                
+                {/* Price positioned absolutely for consistent alignment */}
+                <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-right">
+                  {service.discount_percentage > 0 ? (
+                    <div>
+                      <p className="text-sm sm:text-base lg:text-lg font-bold text-blue-600 whitespace-nowrap">
+                        Rp {formatPrice(pkg.price * (1 - service.discount_percentage / 100))}
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-gray-400 line-through whitespace-nowrap">
                         Rp {formatPrice(pkg.price)}
                       </p>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 whitespace-nowrap">
+                      Rp {formatPrice(pkg.price)}
+                    </p>
+                  )}
                 </div>
+                
                 {selectedPackageId === pkg.id.toString() && (
-                  <div className="absolute inset-0 border-2 border-blue-600 rounded-xl pointer-events-none"></div>
+                  <div className="absolute inset-0 border-2 border-blue-600 rounded-lg sm:rounded-xl pointer-events-none"></div>
                 )}
               </label>
             ))}
@@ -217,11 +219,12 @@ const TimeSlotGrid = ({ slots, selected, onSelect }) => {
 };
 
 // Modern Input Component
-const ModernInput = ({ label, icon: Icon, error, required, ...props }) => {
+const ModernInput = ({ label, icon: Icon, error, required, isValid, ...props }) => {
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-gray-700">
+      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
         {label} {required && <span className="text-red-500">*</span>}
+        {isValid && <Check className="h-3 w-3 text-green-500" />}
       </Label>
       <div className="relative">
         {Icon && (
@@ -231,7 +234,8 @@ const ModernInput = ({ label, icon: Icon, error, required, ...props }) => {
           className={cn(
             "h-12 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all",
             Icon && "pl-10",
-            error && "border-red-300"
+            error && "border-red-300",
+            isValid && "border-green-300"
           )}
           {...props}
         />
@@ -436,6 +440,13 @@ export default function BookingPage() {
   const isGraduationPhotography = selectedService?.name === 'Graduation Photography';
   const isSelfPhoto = selectedService?.name === 'Self Photo';
 
+  const [stepCompletion, setStepCompletion] = useState({
+  step1: false,
+  step2: false,
+  step3: false,
+  step4: false
+  });
+
   const {
     register,
     handleSubmit,
@@ -502,6 +513,64 @@ export default function BookingPage() {
       setPackages([]);
     }
   };
+
+const isStepValid = () => {
+  switch (currentStep) {
+    case 1:
+      const name = watch('customerName');
+      const phone = watch('phoneNumber');
+      return name && name.length >= 2 && phone && phone.length >= 10;
+      
+    case 2:
+      const serviceId = watch('serviceId');
+      const packageId = watch('packageId');
+      if (!serviceId || !packageId) return false;
+      
+      if (isGraduationPhotography) {
+        const faculty = watch('faculty');
+        const university = watch('university');
+        return faculty && faculty.length > 0 && university && university.length > 0;
+      }
+      return true;
+      
+    case 3:
+      const date = watch('bookingDate');
+      if (!date) return false;
+      
+      if (selectedService?.has_time_slots) {
+        const timeSlot = watch('timeSlotId');
+        return timeSlot && timeSlot.length > 0;
+      }
+      return true;
+      
+    case 4:
+      const paymentType = watch('paymentType');
+      const paymentMethod = watch('paymentMethod');
+      
+      if (!paymentType || !paymentMethod) return false;
+      
+      // Check payment proof for transfer and QRIS
+      if (paymentMethod === 'transfer' || paymentMethod === 'qris') {
+        const paymentProof = watch('paymentProof');
+        return paymentProof && paymentProof.length > 0;
+      }
+      
+      return true;
+      
+    default:
+      return false;
+  }
+};
+
+const watchedFields = watch();
+
+useEffect(() => {
+  const isValid = isStepValid();
+  setStepCompletion(prev => ({
+    ...prev,
+    [`step${currentStep}`]: isValid
+  }));
+}, [watchedFields, currentStep, selectedService, isGraduationPhotography]);
 
   //  Tambahkan function untuk validate promo code
 // Update fungsi validatePromoCode di BookingPage.jsx
@@ -812,11 +881,11 @@ const handleNext = async () => {
         </div>
         
         {/* Form Container */}
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8 relative">
           <form onSubmit={handleSubmit(onSubmit)}>
             {/* Step 1: Personal Information */}
             {currentStep === 1 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-20">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Hi Thirtys!</h2>
                   <p className="text-gray-600 mt-2">Silahkan mengisi data diri untuk melakukan booking foto ya</p>
@@ -827,6 +896,7 @@ const handleNext = async () => {
                     label="Full Name"
                     icon={User2}
                     required
+                    isValid={watch('customerName')?.length >= 2}
                     {...register('customerName')}
                     placeholder="Enter your full name"
                     error={errors.customerName?.message}
@@ -836,6 +906,7 @@ const handleNext = async () => {
                     label="WhatsApp Number"
                     icon={Phone}
                     required
+                    isValid={watch('phoneNumber')?.length >= 14}
                     {...register('phoneNumber')}
                     placeholder="+62 812 3456 7890"
                     error={errors.phoneNumber?.message}
@@ -846,7 +917,7 @@ const handleNext = async () => {
 
             {/* Step 2: Service Selection */}
             {currentStep === 2 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-20">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Pilih Service</h2>
                   <p className="text-gray-600 mt-2">Silahkan pilih service dan paket sesuai kebutuhan kamu</p>
@@ -919,7 +990,7 @@ const handleNext = async () => {
 
             {/* Step 3: Schedule */}
             {currentStep === 3 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-20">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Pilih tanggalnya</h2>
                   <p className="text-gray-600 mt-2">Kapan pelaksanaan sesi foto kamu?</p>
@@ -998,7 +1069,7 @@ const handleNext = async () => {
 
             {/* Step 4: Payment */}
             {currentStep === 4 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-20">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Payment details</h2>
                   <p className="text-gray-600 mt-2">Pilih metode pembayaran</p>
@@ -1392,43 +1463,64 @@ const handleNext = async () => {
             )}
 
             {/* Navigation */}
-            <div className="flex justify-between mt-6 sm:mt-8 pt-4 sm:pt-6 border-t">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleBack}
-                disabled={currentStep === 1}
-                className="gap-1.5 sm:gap-2 text-gray-600 hover:text-gray-900 text-sm sm:text-base px-3 sm:px-4"
-              >
-                <ChevronLeft className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-                Back
-              </Button>
-              
-              <Button
-                type="button"
-                onClick={handleNext}
-                disabled={currentStep === steps && loading}
-                className="gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 rounded-lg sm:rounded-xl shadow-lg shadow-blue-200 text-sm sm:text-base"
-              >
-                {currentStep === steps ? (
-                  loading ? (
-                    <>
-                      <div className="h-3.5 sm:h-4 w-3.5 sm:w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Processing...
-                    </>
+            <div className="sticky bottom-0 bg-white border-t mt-6 sm:mt-8 -mx-4 sm:-mx-8 px-4 sm:px-8 py-4 sm:py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+              <div className="flex justify-between items-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleBack}
+                  disabled={currentStep === 1}
+                  className="gap-1.5 sm:gap-2 text-gray-600 hover:text-gray-900 text-sm sm:text-base px-3 sm:px-4"
+                >
+                  <ChevronLeft className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                  Back
+                </Button>
+                
+                {/* Show validation hint when button is disabled */}
+                {!isStepValid() && currentStep < steps && (
+                  <span className="text-xs text-gray-500 hidden sm:block">
+                    Complete all fields to continue
+                  </span>
+                )}
+                
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!isStepValid() || (currentStep === steps && loading)}
+                  className={cn(
+                    "gap-1.5 sm:gap-2 px-4 sm:px-6 rounded-lg sm:rounded-xl shadow-lg text-sm sm:text-base transition-all",
+                    isStepValid() 
+                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200" 
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  )}
+                >
+                  {currentStep === steps ? (
+                    loading ? (
+                      <>
+                        <div className="h-3.5 sm:h-4 w-3.5 sm:w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Confirm Booking
+                        <Check className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                      </>
+                    )
                   ) : (
                     <>
-                      Confirm Booking
-                      <Check className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                      Continue
+                      <ArrowRight className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
                     </>
-                  )
-                ) : (
-                  <>
-                    Continue
-                    <ArrowRight className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-                  </>
-                )}
-              </Button>
+                  )}
+                </Button>
+              </div>
+              
+              {/* Mobile hint
+              {!isStepValid() && currentStep < steps && (
+                <p className="text-xs text-gray-500 text-center mt-2 sm:hidden">
+                  Complete all fields to continue
+                </p>
+              )} */}
             </div>
           </form>
         </div>
