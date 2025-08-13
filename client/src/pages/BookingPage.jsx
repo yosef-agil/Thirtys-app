@@ -991,14 +991,15 @@ const handleNext = async () => {
             )}
 
             {/* Step 3: Schedule */}
+            {/* Step 3: Schedule */}
             {currentStep === 3 && (
-<div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-20">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-32">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Pilih tanggalnya</h2>
                   <p className="text-gray-600 mt-2">Kapan pelaksanaan sesi foto kamu?</p>
                 </div>
 
-                <div className="grid gap-8 lg:grid-cols-2 mt-8">
+                <div className="space-y-6 mt-8">
                   {/* Date Selection */}
                   <div>
                     <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
@@ -1006,20 +1007,28 @@ const handleNext = async () => {
                       Select Date
                     </h3>
                     <div className="bg-gray-50 p-4 rounded-xl">
-                      <Calendar
-                        mode="single"
-                        selected={watchDate}
-                        onSelect={(date) => setValue('bookingDate', date)}
-                        disabled={(date) => {
-                          // Set today at midnight (00:00:00)
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          
-                          // Only disable dates before today
-                          return date < today;
+                      {/* Custom Date Input */}
+                      <input
+                        type="date"
+                        value={watchDate ? format(watchDate, 'yyyy-MM-dd') : ''}
+                        onChange={(e) => {
+                          const date = e.target.value ? new Date(e.target.value) : null;
+                          setValue('bookingDate', date);
+                          // Clear time slot when date changes
+                          if (selectedService?.has_time_slots) {
+                            setValue('timeSlotId', '');
+                          }
                         }}
-                        className="rounded-md w-full"
+                        min={format(new Date(), 'yyyy-MM-dd')}
+                        className="w-full p-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       />
+                      
+                      {/* Optional: Show selected date nicely */}
+                      {watchDate && (
+                        <p className="mt-3 text-sm text-gray-600 text-center">
+                          Selected: {format(watchDate, 'EEEE, dd MMMM yyyy')}
+                        </p>
+                      )}
                     </div>
                     {errors.bookingDate && (
                       <p className="text-sm text-red-500 mt-2">{errors.bookingDate.message}</p>
@@ -1027,45 +1036,90 @@ const handleNext = async () => {
                   </div>
 
                   {/* Time Slot Selection */}
-                  {selectedService?.has_time_slots && (
+                  {selectedService?.has_time_slots && watchDate && (
                     <div>
                       <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
                         <Clock className="h-4 w-4" />
                         Select Time
                       </h3>
                       {timeSlots.length > 0 ? (
-                        <TimeSlotGrid
-                          slots={timeSlots}
-                          selected={watch('timeSlotId')}
-                          onSelect={(id) => setValue('timeSlotId', id)}
-                        />
-                      ) : watchDate ? (
+                        <div className="space-y-2">
+                          {timeSlots.map(slot => {
+                            const availableSlots = slot.max_capacity - (slot.current_bookings || 0);
+                            const isAvailable = availableSlots > 0;
+                            const slotId = slot.id.toString();
+                            const isSelected = watch('timeSlotId') === slotId;
+                            
+                            return (
+                              <button
+                                key={slot.id}
+                                type="button"
+                                onClick={() => {
+                                  if (isAvailable) {
+                                    setValue('timeSlotId', slotId);
+                                  }
+                                }}
+                                disabled={!isAvailable}
+                                className={cn(
+                                  "w-full p-4 rounded-xl border text-left transition-all duration-200",
+                                  isSelected
+                                    ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500"
+                                    : isAvailable
+                                      ? "border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50"
+                                      : "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
+                                )}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <p className="font-semibold text-gray-900">
+                                    {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                                  </p>
+                                  <p className={cn(
+                                    "text-sm",
+                                    isAvailable ? "text-gray-600" : "text-gray-400"
+                                  )}>
+                                    {isAvailable ? `${availableSlots} slots left` : 'Fully booked'}
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
                         <div className="text-center py-12 bg-gray-50 rounded-xl">
                           <Clock className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                           <p className="text-gray-500">No time slots available</p>
                           <p className="text-sm text-gray-400 mt-1">Please select another date</p>
                         </div>
-                      ) : (
-                        <div className="text-center py-12 bg-gray-50 rounded-xl">
-                          <CalendarIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                          <p className="text-gray-500">Select a date first</p>
-                        </div>
                       )}
-                      {errors.timeSlotId && (
+                      {errors.timeSlotId && timeSlots.length > 0 && (
                         <p className="text-sm text-red-500 mt-2">{errors.timeSlotId.message}</p>
                       )}
                     </div>
                   )}
-                </div>
 
-                {watchDate && (
-                  <div className="mt-6 p-4 bg-blue-50 rounded-xl">
-                    <p className="text-sm text-center">
-                      <span className="font-medium text-blue-900">Selected Date:</span>{' '}
-                      <span className="text-blue-700">{format(watchDate, 'EEEE, dd MMMM yyyy')}</span>
-                    </p>
-                  </div>
-                )}
+                  {/* Selected Summary */}
+                  {watchDate && (
+                    <div className="mt-6 p-4 bg-blue-50 rounded-xl">
+                      <div className="text-center space-y-1">
+                        <p className="text-sm">
+                          <span className="font-medium text-blue-900">Selected Date:</span>{' '}
+                          <span className="text-blue-700">{format(watchDate, 'EEEE, dd MMMM yyyy')}</span>
+                        </p>
+                        {watch('timeSlotId') && timeSlots.length > 0 && (
+                          <p className="text-sm">
+                            <span className="font-medium text-blue-900">Selected Time:</span>{' '}
+                            <span className="text-blue-700">
+                              {(() => {
+                                const selectedSlot = timeSlots.find(s => s.id.toString() === watch('timeSlotId'));
+                                return selectedSlot ? `${selectedSlot.start_time.slice(0, 5)} - ${selectedSlot.end_time.slice(0, 5)}` : '';
+                              })()}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
