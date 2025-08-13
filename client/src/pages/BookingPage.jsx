@@ -887,7 +887,7 @@ const handleNext = async () => {
           <form onSubmit={handleSubmit(onSubmit)}>
             {/* Step 1: Personal Information */}
             {currentStep === 1 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-20">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-24">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Hi Thirtys!</h2>
                   <p className="text-gray-600 mt-2">Silahkan mengisi data diri untuk melakukan booking foto ya</p>
@@ -919,7 +919,7 @@ const handleNext = async () => {
 
             {/* Step 2: Service Selection */}
             {currentStep === 2 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-20">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-24">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Pilih Service</h2>
                   <p className="text-gray-600 mt-2">Silahkan pilih service dan paket sesuai kebutuhan kamu</p>
@@ -991,16 +991,14 @@ const handleNext = async () => {
             )}
 
             {/* Step 3: Schedule */}
-            {/* Step 3: Schedule */}
-            {/* Step 3: Schedule */}
             {currentStep === 3 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-20">
+<div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-20">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Pilih tanggalnya</h2>
                   <p className="text-gray-600 mt-2">Kapan pelaksanaan sesi foto kamu?</p>
                 </div>
 
-                <div className="space-y-6 mt-8">
+                <div className="grid gap-8 lg:grid-cols-2 mt-8">
                   {/* Date Selection */}
                   <div>
                     <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
@@ -1013,8 +1011,11 @@ const handleNext = async () => {
                         selected={watchDate}
                         onSelect={(date) => setValue('bookingDate', date)}
                         disabled={(date) => {
+                          // Set today at midnight (00:00:00)
                           const today = new Date();
                           today.setHours(0, 0, 0, 0);
+                          
+                          // Only disable dates before today
                           return date < today;
                         }}
                         className="rounded-md w-full"
@@ -1026,96 +1027,51 @@ const handleNext = async () => {
                   </div>
 
                   {/* Time Slot Selection */}
-                  {selectedService?.has_time_slots && watchDate && (
+                  {selectedService?.has_time_slots && (
                     <div>
                       <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
                         <Clock className="h-4 w-4" />
                         Select Time
                       </h3>
                       {timeSlots.length > 0 ? (
-                        <div className="space-y-2">
-                          {timeSlots.map(slot => {
-                            const availableSlots = slot.max_capacity - (slot.current_bookings || 0);
-                            const isAvailable = availableSlots > 0;
-                            const slotId = slot.id.toString();
-                            const isSelected = watch('timeSlotId') === slotId;
-                            
-                            return (
-                              <button
-                                key={slot.id}
-                                type="button"
-                                onClick={() => {
-                                  if (isAvailable) {
-                                    setValue('timeSlotId', slotId);
-                                  }
-                                }}
-                                disabled={!isAvailable}
-                                className={cn(
-                                  "w-full p-4 rounded-xl border text-left transition-all duration-200",
-                                  isSelected
-                                    ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500"
-                                    : isAvailable
-                                      ? "border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50"
-                                      : "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
-                                )}
-                              >
-                                <div className="flex justify-between items-center">
-                                  <p className="font-semibold text-gray-900">
-                                    {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
-                                  </p>
-                                  <p className={cn(
-                                    "text-sm",
-                                    isAvailable ? "text-gray-600" : "text-gray-400"
-                                  )}>
-                                    {isAvailable ? `${availableSlots} slots left` : 'Fully booked'}
-                                  </p>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
+                        <TimeSlotGrid
+                          slots={timeSlots}
+                          selected={watch('timeSlotId')}
+                          onSelect={(id) => setValue('timeSlotId', id)}
+                        />
+                      ) : watchDate ? (
                         <div className="text-center py-12 bg-gray-50 rounded-xl">
                           <Clock className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                           <p className="text-gray-500">No time slots available</p>
                           <p className="text-sm text-gray-400 mt-1">Please select another date</p>
                         </div>
+                      ) : (
+                        <div className="text-center py-12 bg-gray-50 rounded-xl">
+                          <CalendarIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                          <p className="text-gray-500">Select a date first</p>
+                        </div>
                       )}
-                      {errors.timeSlotId && timeSlots.length > 0 && (
+                      {errors.timeSlotId && (
                         <p className="text-sm text-red-500 mt-2">{errors.timeSlotId.message}</p>
                       )}
                     </div>
                   )}
-
-                  {/* Selected Summary */}
-                  {watchDate && (
-                    <div className="mt-6 p-4 bg-blue-50 rounded-xl">
-                      <div className="text-center space-y-1">
-                        <p className="text-sm">
-                          <span className="font-medium text-blue-900">Selected Date:</span>{' '}
-                          <span className="text-blue-700">{format(watchDate, 'EEEE, dd MMMM yyyy')}</span>
-                        </p>
-                        {watch('timeSlotId') && timeSlots.length > 0 && (
-                          <p className="text-sm">
-                            <span className="font-medium text-blue-900">Selected Time:</span>{' '}
-                            <span className="text-blue-700">
-                              {(() => {
-                                const selectedSlot = timeSlots.find(s => s.id.toString() === watch('timeSlotId'));
-                                return selectedSlot ? `${selectedSlot.start_time.slice(0, 5)} - ${selectedSlot.end_time.slice(0, 5)}` : '';
-                              })()}
-                            </span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
+
+                {watchDate && (
+                  <div className="mt-6 p-4 bg-blue-50 rounded-xl">
+                    <p className="text-sm text-center">
+                      <span className="font-medium text-blue-900">Selected Date:</span>{' '}
+                      <span className="text-blue-700">{format(watchDate, 'EEEE, dd MMMM yyyy')}</span>
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Step 4: Payment */}
             {currentStep === 4 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-20">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-24">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Payment details</h2>
                   <p className="text-gray-600 mt-2">Pilih metode pembayaran</p>
@@ -1509,65 +1465,58 @@ const handleNext = async () => {
             )}
 
             {/* Navigation */}
-            <div className="sticky bottom-0 bg-white border-t mt-6 sm:mt-8 -mx-4 sm:-mx-8 px-4 sm:px-8 py-4 sm:py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-              <div className="flex justify-between items-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleBack}
-                  disabled={currentStep === 1}
-                  className="gap-1.5 sm:gap-2 text-gray-600 hover:text-gray-900 text-sm sm:text-base px-3 sm:px-4"
-                >
-                  <ChevronLeft className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-                  Back
-                </Button>
-                
-                {/* Show validation hint when button is disabled */}
-                {!isStepValid() && currentStep < steps && (
-                  <span className="text-xs text-gray-500 hidden sm:block">
-                    Complete all fields to continue
-                  </span>
-                )}
-                
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={!isStepValid() || (currentStep === steps && loading)}
-                  className={cn(
-                    "gap-1.5 sm:gap-2 px-4 sm:px-6 rounded-lg sm:rounded-xl shadow-lg text-sm sm:text-base transition-all",
-                    isStepValid() 
-                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200" 
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-4 sm:py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                <div className="max-w-3xl mx-auto flex justify-between items-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleBack}
+                    disabled={currentStep === 1}
+                    className="gap-1.5 sm:gap-2 text-gray-600 hover:text-gray-900 text-sm sm:text-base px-3 sm:px-4"
+                  >
+                    <ChevronLeft className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                    Back
+                  </Button>
+                  
+                  {/* Show validation hint when button is disabled */}
+                  {!isStepValid() && currentStep < steps && (
+                    <span className="text-xs text-gray-500 hidden sm:block">
+                      Complete all fields to continue
+                    </span>
                   )}
-                >
-                  {currentStep === steps ? (
-                    loading ? (
-                      <>
-                        <div className="h-3.5 sm:h-4 w-3.5 sm:w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Processing...
-                      </>
+                  
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={!isStepValid() || (currentStep === steps && loading)}
+                    className={cn(
+                      "gap-1.5 sm:gap-2 px-4 sm:px-6 rounded-lg sm:rounded-xl shadow-lg text-sm sm:text-base transition-all",
+                      isStepValid() 
+                        ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200" 
+                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    )}
+                  >
+                    {currentStep === steps ? (
+                      loading ? (
+                        <>
+                          <div className="h-3.5 sm:h-4 w-3.5 sm:w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          Confirm Booking
+                          <Check className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                        </>
+                      )
                     ) : (
                       <>
-                        Confirm Booking
-                        <Check className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                        Continue
+                        <ArrowRight className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
                       </>
-                    )
-                  ) : (
-                    <>
-                      Continue
-                      <ArrowRight className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-                    </>
-                  )}
-                </Button>
+                    )}
+                  </Button>
+                </div>
               </div>
-              
-              {/* Mobile hint
-              {!isStepValid() && currentStep < steps && (
-                <p className="text-xs text-gray-500 text-center mt-2 sm:hidden">
-                  Complete all fields to continue
-                </p>
-              )} */}
-            </div>
           </form>
         </div>
       </div>
