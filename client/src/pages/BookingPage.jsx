@@ -992,6 +992,7 @@ const handleNext = async () => {
 
             {/* Step 3: Schedule */}
             {/* Step 3: Schedule */}
+            {/* Step 3: Schedule */}
             {currentStep === 3 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-32">
                 <div>
@@ -1006,30 +1007,50 @@ const handleNext = async () => {
                       <CalendarIcon className="h-4 w-4" />
                       Select Date
                     </h3>
-                    <div className="bg-gray-50 p-4 rounded-xl">
-                      {/* Custom Date Input */}
+                    <div className="relative">
                       <input
                         type="date"
+                        id="booking-date"
                         value={watchDate ? format(watchDate, 'yyyy-MM-dd') : ''}
                         onChange={(e) => {
-                          const date = e.target.value ? new Date(e.target.value) : null;
-                          setValue('bookingDate', date);
-                          // Clear time slot when date changes
-                          if (selectedService?.has_time_slots) {
-                            setValue('timeSlotId', '');
+                          const dateValue = e.target.value;
+                          if (dateValue) {
+                            // Create date at noon to avoid timezone issues
+                            const [year, month, day] = dateValue.split('-');
+                            const date = new Date(year, month - 1, day, 12, 0, 0);
+                            setValue('bookingDate', date);
+                            
+                            // Clear time slot when date changes
+                            if (selectedService?.has_time_slots) {
+                              setValue('timeSlotId', '');
+                            }
+                          } else {
+                            setValue('bookingDate', null);
                           }
                         }}
                         min={format(new Date(), 'yyyy-MM-dd')}
-                        className="w-full p-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        className="w-full p-4 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white text-gray-900 appearance-none"
+                        style={{
+                          WebkitAppearance: 'none',
+                          MozAppearance: 'none',
+                          minHeight: '48px',
+                          fontSize: '16px' // Prevents zoom on iOS
+                        }}
                       />
                       
-                      {/* Optional: Show selected date nicely */}
-                      {watchDate && (
-                        <p className="mt-3 text-sm text-gray-600 text-center">
-                          Selected: {format(watchDate, 'EEEE, dd MMMM yyyy')}
-                        </p>
-                      )}
+                      {/* Calendar icon overlay for better UX */}
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <CalendarIcon className="h-5 w-5 text-gray-400" />
+                      </div>
                     </div>
+                    
+                    {/* Show selected date */}
+                    {watchDate && (
+                      <p className="mt-3 text-sm text-gray-600 text-center bg-gray-50 p-2 rounded-lg">
+                        Selected: {format(watchDate, 'EEEE, dd MMMM yyyy')}
+                      </p>
+                    )}
+                    
                     {errors.bookingDate && (
                       <p className="text-sm text-red-500 mt-2">{errors.bookingDate.message}</p>
                     )}
@@ -1065,7 +1086,7 @@ const handleNext = async () => {
                                   isSelected
                                     ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500"
                                     : isAvailable
-                                      ? "border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50"
+                                      ? "border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100"
                                       : "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
                                 )}
                               >
