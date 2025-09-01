@@ -601,7 +601,7 @@ const loadTimeSlots = async () => {
       )}
 
       {/* Add/Edit Slot Dialog */}
-      <Dialog open={slotFormOpen} onOpenChange={setSlotFormOpen}>
+      <Dialog open={slotFormOpen} onOpenChange={setSlotFormOpen} modal={true}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -671,7 +671,7 @@ const loadTimeSlots = async () => {
       </Dialog>
 
       {/* Bulk Create Dialog */}
-      <Dialog open={bulkCreateOpen} onOpenChange={setBulkCreateOpen}>
+      <Dialog open={bulkCreateOpen} onOpenChange={setBulkCreateOpen} modal={true}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Bulk Create Time Slots</DialogTitle>
@@ -679,26 +679,28 @@ const loadTimeSlots = async () => {
           
           <div className="space-y-6 mt-4">
             {/* Date Range */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Input
-                  type="date"
-                  value={format(bulkForm.start_date, 'yyyy-MM-dd')}
-                  onChange={(e) => setBulkForm({...bulkForm, start_date: new Date(e.target.value)})}
-                  className="h-11 rounded-xl"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Input
+                    type="date"
+                    value={format(bulkForm.start_date, 'yyyy-MM-dd')}
+                    onChange={(e) => setBulkForm({...bulkForm, start_date: new Date(e.target.value)})}
+                    className="h-11 rounded-xl"
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <Input
+                    type="date"
+                    value={format(bulkForm.end_date, 'yyyy-MM-dd')}
+                    onChange={(e) => setBulkForm({...bulkForm, end_date: new Date(e.target.value)})}
+                    className="h-11 rounded-xl"
+                    min={format(bulkForm.start_date, 'yyyy-MM-dd')}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input
-                  type="date"
-                  value={format(bulkForm.end_date, 'yyyy-MM-dd')}
-                  onChange={(e) => setBulkForm({...bulkForm, end_date: new Date(e.target.value)})}
-                  className="h-11 rounded-xl"
-                />
-              </div>
-            </div>
 
             {/* Time Range */}
             <div className="grid grid-cols-2 gap-4">
@@ -816,7 +818,7 @@ const loadTimeSlots = async () => {
       </Dialog>
 
         {/* Bulk Delete Dialog - HARUS DI LUAR BULK CREATE DIALOG */}
-        <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen} modal={true}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -886,7 +888,7 @@ const loadTimeSlots = async () => {
         </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} modal={true}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <div className="flex items-center gap-3">

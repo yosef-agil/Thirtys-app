@@ -31,6 +31,7 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
   }
+  
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -59,8 +60,6 @@
   }
 }
 
-
-
 @layer base {
   * {
     @apply border-border;
@@ -70,6 +69,33 @@
   }
 }
 
+/* Fix untuk Radix UI components */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
+
+/* Fix untuk Dialog/Modal */
+[role="dialog"] {
+  z-index: 50 !important;
+}
+
+/* Fix untuk overlay backdrop */
+[data-radix-dialog-overlay] {
+  z-index: 50 !important;
+}
+
+/* Fix untuk Select dropdown di dalam Dialog */
+[role="dialog"] [data-radix-select-content] {
+  z-index: 9999 !important;
+}
+
+/* Fix untuk native date input - JANGAN hide calendar picker */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: block;
+  cursor: pointer;
+}
+
+/* Animation fix untuk Select */
 [data-radix-select-content] {
   animation: none !important;
   transform: none !important;
@@ -80,3 +106,26 @@
   animation: none !important;
 }
 
+/* Style native date input */
+input[type="date"] {
+  position: relative;
+  padding-right: 40px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  opacity: 1;
+  width: 20px;
+  height: 20px;
+}
+
+/* Hide default calendar icon on some browsers */
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-clear-button {
+  display: none;
+  -webkit-appearance: none;
+}

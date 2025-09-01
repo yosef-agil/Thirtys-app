@@ -31,7 +31,6 @@ import {
   TrendingUp,
   Percent,
   DollarSign,
-  Calendar,
   Users,
   Package,
   Download,
@@ -40,6 +39,8 @@ import {
 import { format } from 'date-fns';
 import api from '../services/api';
 import * as XLSX from 'xlsx';
+import { Calendar as CalendarIcon } from 'lucide-react';
+
 
 export default function PromoCodeManager() {
   const [promoCodes, setPromoCodes] = useState([]);
@@ -51,6 +52,7 @@ export default function PromoCodeManager() {
   const [copiedCode, setCopiedCode] = useState('');
   const [selectedPromoCodes, setSelectedPromoCodes] = useState([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+
   
   const [formData, setFormData] = useState({
     code: '',
@@ -600,7 +602,7 @@ export default function PromoCodeManager() {
       </Card>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} modal={true}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
@@ -611,9 +613,9 @@ export default function PromoCodeManager() {
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="code">Promo Code</Label>
+                <Label htmlFor="promo-code">Promo Code</Label>
                 <Input
-                  id="code"
+                  id="promo-code"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                   placeholder="e.g., THIRTY5K"
@@ -624,15 +626,15 @@ export default function PromoCodeManager() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="discount_type">Discount Type</Label>
+                  <Label htmlFor="discount-type">Discount Type</Label>
                   <Select
                     value={formData.discount_type}
                     onValueChange={(value) => setFormData({ ...formData, discount_type: value })}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger id="discount-type">
+                      <SelectValue placeholder="Select type" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" sideOffset={5}>
                       <SelectItem value="percentage">Percentage</SelectItem>
                       <SelectItem value="fixed">Fixed Amount</SelectItem>
                     </SelectContent>
@@ -640,9 +642,9 @@ export default function PromoCodeManager() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="discount_value">Discount Value</Label>
+                  <Label htmlFor="discount-value">Discount Value</Label>
                   <Input
-                    id="discount_value"
+                    id="discount-value"
                     type="number"
                     value={formData.discount_value}
                     onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
@@ -653,15 +655,15 @@ export default function PromoCodeManager() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="service_id">Service (Optional)</Label>
+                <Label htmlFor="service">Service (Optional)</Label>
                 <Select
                   value={formData.service_id}
                   onValueChange={(value) => setFormData({ ...formData, service_id: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="service">
                     <SelectValue placeholder="All services" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={5}>
                     <SelectItem value="all">All services</SelectItem>
                     {services.map(service => (
                       <SelectItem key={service.id} value={service.id.toString()}>
@@ -673,9 +675,9 @@ export default function PromoCodeManager() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="usage_limit">Usage Limit (Optional)</Label>
+                <Label htmlFor="usage-limit">Usage Limit (Optional)</Label>
                 <Input
-                  id="usage_limit"
+                  id="usage-limit"
                   type="number"
                   value={formData.usage_limit}
                   onChange={(e) => setFormData({ ...formData, usage_limit: e.target.value })}
@@ -685,22 +687,26 @@ export default function PromoCodeManager() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="valid_from">Valid From</Label>
+                  <Label htmlFor="valid-from">Valid From</Label>
                   <Input
-                    id="valid_from"
+                    id="valid-from"
                     type="date"
                     value={formData.valid_from}
                     onChange={(e) => setFormData({ ...formData, valid_from: e.target.value })}
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                    className="block w-full"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="valid_until">Valid Until (Optional)</Label>
+                  <Label htmlFor="valid-until">Valid Until (Optional)</Label>
                   <Input
-                    id="valid_until"
+                    id="valid-until"
                     type="date"
                     value={formData.valid_until}
                     onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
+                    min={formData.valid_from || format(new Date(), 'yyyy-MM-dd')}
+                    className="block w-full"
                   />
                 </div>
               </div>
@@ -726,7 +732,7 @@ export default function PromoCodeManager() {
       </Dialog>
 
       {/* Bulk Create Dialog */}
-      <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+      <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen} modal={true}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Bulk Create Promo Codes</DialogTitle>
@@ -736,9 +742,9 @@ export default function PromoCodeManager() {
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="prefix">Code Prefix</Label>
+                  <Label htmlFor="bulk-prefix">Code Prefix</Label>
                   <Input
-                    id="prefix"
+                    id="bulk-prefix"
                     value={bulkFormData.prefix}
                     onChange={(e) => setBulkFormData({ ...bulkFormData, prefix: e.target.value.toUpperCase() })}
                     placeholder="e.g., PROMO"
@@ -747,9 +753,9 @@ export default function PromoCodeManager() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="count">Number of Codes</Label>
+                  <Label htmlFor="bulk-count">Number of Codes</Label>
                   <Input
-                    id="count"
+                    id="bulk-count"
                     type="number"
                     min="1"
                     max="100"
@@ -762,15 +768,15 @@ export default function PromoCodeManager() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="bulk_discount_type">Discount Type</Label>
+                  <Label htmlFor="bulk-discount-type">Discount Type</Label>
                   <Select
                     value={bulkFormData.discount_type}
                     onValueChange={(value) => setBulkFormData({ ...bulkFormData, discount_type: value })}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger id="bulk-discount-type">
+                      <SelectValue placeholder="Select type" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" sideOffset={5}>
                       <SelectItem value="percentage">Percentage</SelectItem>
                       <SelectItem value="fixed">Fixed Amount</SelectItem>
                     </SelectContent>
@@ -778,9 +784,9 @@ export default function PromoCodeManager() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bulk_discount_value">Discount Value</Label>
+                  <Label htmlFor="bulk-discount-value">Discount Value</Label>
                   <Input
-                    id="bulk_discount_value"
+                    id="bulk-discount-value"
                     type="number"
                     value={bulkFormData.discount_value}
                     onChange={(e) => setBulkFormData({ ...bulkFormData, discount_value: e.target.value })}
@@ -791,15 +797,15 @@ export default function PromoCodeManager() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="bulk_service_id">Service (Optional)</Label>
+                <Label htmlFor="bulk-service">Service (Optional)</Label>
                 <Select
                   value={bulkFormData.service_id}
                   onValueChange={(value) => setBulkFormData({ ...bulkFormData, service_id: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="bulk-service">
                     <SelectValue placeholder="All services" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={5}>
                     <SelectItem value="all">All services</SelectItem>
                     {services.map(service => (
                       <SelectItem key={service.id} value={service.id.toString()}>
@@ -811,9 +817,9 @@ export default function PromoCodeManager() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="bulk_usage_limit">Usage Limit per Code (Optional)</Label>
+                <Label htmlFor="bulk-usage-limit">Usage Limit per Code (Optional)</Label>
                 <Input
-                  id="bulk_usage_limit"
+                  id="bulk-usage-limit"
                   type="number"
                   value={bulkFormData.usage_limit}
                   onChange={(e) => setBulkFormData({ ...bulkFormData, usage_limit: e.target.value })}
@@ -823,22 +829,26 @@ export default function PromoCodeManager() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="bulk_valid_from">Valid From</Label>
+                  <Label htmlFor="bulk-valid-from">Valid From</Label>
                   <Input
-                    id="bulk_valid_from"
+                    id="bulk-valid-from"
                     type="date"
                     value={bulkFormData.valid_from}
                     onChange={(e) => setBulkFormData({ ...bulkFormData, valid_from: e.target.value })}
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                    className="block w-full"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bulk_valid_until">Valid Until (Optional)</Label>
+                  <Label htmlFor="bulk-valid-until">Valid Until (Optional)</Label>
                   <Input
-                    id="bulk_valid_until"
+                    id="bulk-valid-until"
                     type="date"
                     value={bulkFormData.valid_until}
                     onChange={(e) => setBulkFormData({ ...bulkFormData, valid_until: e.target.value })}
+                    min={bulkFormData.valid_from || format(new Date(), 'yyyy-MM-dd')}
+                    className="block w-full"
                   />
                 </div>
               </div>

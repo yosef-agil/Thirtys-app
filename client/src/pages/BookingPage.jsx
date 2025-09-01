@@ -1015,12 +1015,10 @@ const handleNext = async () => {
                         onChange={(e) => {
                           const dateValue = e.target.value;
                           if (dateValue) {
-                            // Create date at noon to avoid timezone issues
                             const [year, month, day] = dateValue.split('-');
                             const date = new Date(year, month - 1, day, 12, 0, 0);
                             setValue('bookingDate', date);
                             
-                            // Clear time slot when date changes
                             if (selectedService?.has_time_slots) {
                               setValue('timeSlotId', '');
                             }
@@ -1029,19 +1027,16 @@ const handleNext = async () => {
                           }
                         }}
                         min={format(new Date(), 'yyyy-MM-dd')}
-                        className="w-full p-4 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white text-gray-900 appearance-none"
+                        className="w-full p-4 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white text-gray-900"
                         style={{
                           WebkitAppearance: 'none',
                           MozAppearance: 'none',
                           minHeight: '48px',
-                          fontSize: '16px' // Prevents zoom on iOS
+                          fontSize: '16px'
                         }}
                       />
                       
-                      {/* Calendar icon overlay for better UX */}
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <CalendarIcon className="h-5 w-5 text-gray-400" />
-                      </div>
+                      {/* Hapus calendar icon overlay karena browser sudah punya */}
                     </div>
                     
                     {/* Show selected date */}
@@ -1540,7 +1535,8 @@ const handleNext = async () => {
             )}
 
             {/* Navigation */}
-              <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-4 sm:py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+              {/* Navigation */}
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-4 sm:py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-30">
                 <div className="max-w-3xl mx-auto flex justify-between items-center">
                   <Button
                     type="button"
