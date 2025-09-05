@@ -339,11 +339,22 @@ const ThankYouPage = ({ bookingDetails }) => {
                 <span className="font-medium">{bookingDetails.packageName}</span>
               </div>
               <div className="flex justify-between items-center pt-3 border-t">
-                <span className="text-sm font-medium">Total Payment</span>
+                <span className="text-sm font-medium">
+                  {bookingDetails.paymentType === 'down_payment' ? 'Down Payment' : 'Total Payment'}
+                </span>
                 <span className="text-xl font-bold text-blue-600">
                   Rp {formatPrice(bookingDetails.totalAmount)}
                 </span>
               </div>
+
+              {bookingDetails.paymentType === 'down_payment' && (
+                <div className="flex justify-between items-center mt-2 text-sm">
+                  <span className="text-gray-600">Remaining Payment</span>
+                  <span className="font-medium text-gray-900">
+                    Rp {formatPrice(bookingDetails.remainingAmount)}
+                  </span>
+                </div>
+)}
             </div>
             
             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
@@ -374,10 +385,11 @@ const createBookingSchema = (isGraduationPhoto) => {
     packageId: z.string().min(1, 'Please select a package'),
     bookingDate: z.date(),
     timeSlotId: z.string().optional(),
-    paymentType: z.enum(['down_payment', 'full_payment']),
+    paymentType: z.enum(['down_payment', 'full_payment', 'custom_dp']), // Tambahkan custom_dp
     paymentMethod: z.enum(['qris', 'transfer', 'cash']),
     selectedBank: z.string().optional(),
     paymentProof: z.any().optional(),
+    customDPAmount: z.string().optional(), // Tambahkan field ini
   };
 
   if (isGraduationPhoto) {
@@ -411,6 +423,8 @@ export default function BookingPage() {
   const [promoCode, setPromoCode] = useState(''); // NEW
   const [promoValidation, setPromoValidation] = useState(null); // NEW
   const [isValidatingPromo, setIsValidatingPromo] = useState(false); // NEW
+  const [customDPAmount, setCustomDPAmount] = useState(''); // NEW
+  const [customDPError, setCustomDPError] = useState(''); // NEW
 
   const steps = 4;
 
@@ -551,6 +565,13 @@ const isStepValid = () => {
       
       if (!paymentType || !paymentMethod) return false;
       
+      // Validate custom DP amount
+      if (paymentType === 'custom_dp') {
+        const customAmount = parseFloat(customDPAmount) || 0;
+        if (customAmount < 50000) return false;
+        if (customAmount >= totalPrice.discountedPrice) return false;
+      }
+      
       // Check payment proof for transfer and QRIS
       if (paymentMethod === 'transfer' || paymentMethod === 'qris') {
         const paymentProof = watch('paymentProof');
@@ -572,7 +593,25 @@ useEffect(() => {
     ...prev,
     [`step${currentStep}`]: isValid
   }));
-}, [watchedFields, currentStep, selectedService, isGraduationPhotography]);
+}, [
+  currentStep,
+  watchedFields.customerName,
+  watchedFields.phoneNumber,
+  watchedFields.serviceId,
+  watchedFields.packageId,
+  watchedFields.faculty,
+  watchedFields.university,
+  watchedFields.bookingDate,
+  watchedFields.timeSlotId,
+  watchedFields.paymentType,
+  watchedFields.paymentMethod,
+  watchedFields.paymentProof,
+  customDPAmount,
+  customDPError,
+  selectedService,
+  isGraduationPhotography,
+  totalPrice.discountedPrice
+]);
 
   //  Tambahkan function untuk validate promo code
 // Update fungsi validatePromoCode di BookingPage.jsx
@@ -645,21 +684,26 @@ const validatePromoCode = async () => {
         }
         
         let paymentAmount = discountedPrice;
+        
+        // Calculate payment amount based on payment type
         if (watchPaymentType === 'down_payment') {
           paymentAmount = discountedPrice * 0.5;
+        } else if (watchPaymentType === 'custom_dp') {
+          const customAmount = parseFloat(customDPAmount) || 0;
+          paymentAmount = customAmount;
         }
         
         setTotalPrice({
           originalPrice,
           discountedPrice,
           paymentAmount,
-          promoDiscountAmount, // NEW
+          promoDiscountAmount,
           paymentType: watchPaymentType,
           discountPercentage: selectedService?.discount_percentage || 0
         });
       }
     }
-  }, [watchPackage, watchPaymentType, packages, selectedService, promoValidation]);
+  }, [watchPackage, watchPaymentType, packages, selectedService, promoValidation, customDPAmount]);
 
   useEffect(() => {
     if (watchPaymentProof && watchPaymentProof[0]) {
@@ -791,7 +835,7 @@ const handleNext = async () => {
 
     setLoading(true);
   
-      try {
+    try {
         const formData = new FormData();
         
         formData.append('customerName', data.customerName);
@@ -801,6 +845,16 @@ const handleNext = async () => {
         formData.append('bookingDate', format(data.bookingDate, 'yyyy-MM-dd'));
         formData.append('paymentType', data.paymentType);
         formData.append('paymentMethod', data.paymentMethod);
+
+        // Handle custom DP
+        if (data.paymentType === 'custom_dp') {
+          formData.append('paymentType', 'down_payment'); // Backend masih terima down_payment
+          formData.append('customDPAmount', customDPAmount);
+          formData.append('isCustomDP', 'true');
+          formData.append('paidAmount', customDPAmount); // Kirim sebagai paidAmount
+        } else {
+          formData.append('paidAmount', totalPrice.paymentAmount.toString());
+        }
         
         // Add promo code if valid
         if (promoValidation?.valid) {
@@ -825,7 +879,10 @@ const handleNext = async () => {
             customerName: data.customerName,
             serviceName: selectedService?.name,
             packageName: packages.find(p => p.id.toString() === data.packageId)?.package_name,
-            totalAmount: totalPrice.paymentAmount
+            totalAmount: totalPrice.paymentAmount,
+            remainingAmount: response.remainingAmount || 0,
+            paymentType: data.paymentType === 'custom_dp' ? 'down_payment' : data.paymentType,
+            originalPrice: response.originalPrice || totalPrice.discountedPrice
           };
 
           trackBooking({
@@ -1204,6 +1261,102 @@ const handleNext = async () => {
                         )}
                       </label>
                     </div>
+
+                    {/* Custom DP Option - Only for Graduation Photography */}
+                    {isGraduationPhotography && (
+                      <div className="mt-3">
+                        <label
+                          className={cn(
+                            "relative flex flex-col p-4 rounded-xl border cursor-pointer transition-all duration-200",
+                            watchPaymentType === 'custom_dp'
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200 hover:border-gray-300 bg-white"
+                          )}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <input
+                              type="radio"
+                              {...register('paymentType')}
+                              value="custom_dp"
+                              className="sr-only"
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setValue('paymentType', 'custom_dp');
+                                }
+                              }}
+                            />
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900">Custom Down Payment</p>
+                              <p className="text-sm text-gray-500">Set your own DP amount (min. Rp 50,000)</p>
+                            </div>
+                            {watchPaymentType === 'custom_dp' && (
+                              <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                                <Check className="h-3 w-3 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {watchPaymentType === 'custom_dp' && (
+                          <div className="mt-3 space-y-2">
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                                Rp
+                              </span>
+                              <Input
+                                type="number"
+                                value={customDPAmount}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setCustomDPAmount(value);
+                                  
+                                  // Validate custom DP amount
+                                  const amount = parseFloat(value) || 0;
+                                  if (amount < 50000) {
+                                    setCustomDPError('Minimum DP amount is Rp 50,000');
+                                  } else if (amount >= totalPrice.discountedPrice) {
+                                    setCustomDPError('DP amount must be less than total price');
+                                  } else {
+                                    setCustomDPError('');
+                                  }
+                                }}
+                                placeholder="Enter amount"
+                                className="h-12 pl-12 rounded-xl border-gray-200 focus:border-blue-500 bg-white text-gray-900"
+                                min="50000"
+                                max={totalPrice.discountedPrice - 1}
+                                style={{ backgroundColor: 'white' }}
+                              />
+                            </div>
+                            
+                            {customDPError && (
+                              <p className="text-sm text-red-500">{customDPError}</p>
+                            )}
+                            
+                            {customDPAmount && !customDPError && (
+                              <div className="p-3 bg-white/80 backdrop-blur-sm rounded-lg border border-blue-200">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-700">DP Amount:</span>
+                                  <span className="font-medium text-gray-900">Rp {formatPrice(customDPAmount)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm mt-1">
+                                  <span className="text-gray-700">Remaining:</span>
+                                  <span className="font-medium text-gray-900">
+                                    Rp {formatPrice(totalPrice.discountedPrice - parseFloat(customDPAmount))}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between text-sm mt-1">
+                                  <span className="text-gray-700">Percentage:</span>
+                                  <span className="font-medium text-gray-900">
+                                    {Math.round((parseFloat(customDPAmount) / totalPrice.discountedPrice) * 100)}%
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        </label>
+                      </div>
+                    )}
+                    
                     {errors.paymentType && (
                       <p className="text-sm text-red-500 mt-2">{errors.paymentType.message}</p>
                     )}
@@ -1511,6 +1664,18 @@ const handleNext = async () => {
                           <>
                             <div className="space-y-1">
                               <p className="font-semibold text-gray-900">Down Payment (50%)</p>
+                              <p className="text-xs text-gray-500">
+                                Remaining: Rp {formatPrice(totalPrice.discountedPrice - totalPrice.paymentAmount)}
+                              </p>
+                            </div>
+                            <p className="text-xl font-bold text-blue-600">
+                              Rp {formatPrice(totalPrice.paymentAmount)}
+                            </p>
+                          </>
+                        ) : totalPrice.paymentType === 'custom_dp' ? (
+                          <>
+                            <div className="space-y-1">
+                              <p className="font-semibold text-gray-900">Custom Down Payment</p>
                               <p className="text-xs text-gray-500">
                                 Remaining: Rp {formatPrice(totalPrice.discountedPrice - totalPrice.paymentAmount)}
                               </p>

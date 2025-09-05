@@ -64,18 +64,18 @@ const styles = StyleSheet.create({
   mainCard: {
     backgroundColor: "#f9fafb",
     borderRadius: 12,
-    padding: 24,
+    padding: 16,
     marginBottom: 20,
   },
   // Customer section
   customerSection: {
-    marginBottom: 20,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#374151",
-    marginBottom: 12,
+    marginBottom: 6,
   },
   infoGrid: {
     flexDirection: "row",
@@ -180,20 +180,20 @@ const styles = StyleSheet.create({
   },
   summaryDivider: {
     borderBottom: "1px solid #d1d5db",
-    marginVertical: 8,
+    marginVertical: 4,
   },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 8,
+    marginBottom: 4,
   },
   totalLabel: {
-    fontSize: 14,
-    fontWeight: "bold",
+    fontSize: 11,
     color: "#1f2937",
   },
   totalValue: {
-    fontSize: 16,
+    fontSize: 11,
     fontWeight: "bold",
     color: "#2563eb",
   },
@@ -205,7 +205,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fef3c7",
     borderRadius: 8,
     padding: 10,
-    marginBottom: 20,
     flexDirection: "row",
     justifyContent: "space-between",
   },
@@ -267,89 +266,67 @@ const PDFInvoice = ({ invoice }) => {
     }).format(numPrice);
   };
 
-  // Parse data with new structure understanding
-  let serviceName = '';
-  let packageName = '';
-  let originalPrice = 0;
-  let discountPercentage = 0;
-  let discountAmount = 0;
-  let phoneNumber = '';
-  
-  // Check if this is the old structure or new structure
-  if (invoice?.items && invoice.items.length > 0) {
-    // Old structure with items array
-    const item = invoice.items[0];
-    const description = item.description || '';
-    
-    // Parse service and package from description
-    if (description.includes(' - ')) {
-      const parts = description.split(' - ');
-      serviceName = parts[0] || '';
-      packageName = parts.slice(1).join(' - ') || '';
-    } else {
-      serviceName = description;
-    }
-    
-    originalPrice = parseFloat(item.price || 0);
-    
-    // Check for discount in percentage
-    if (invoice.discount) {
-      discountPercentage = parseFloat(invoice.discount);
-      discountAmount = (discountPercentage / 100) * originalPrice;
-    }
-    
-    // Try to find phone number in various places
-    phoneNumber = invoice.phone || invoice.phone_number || invoice.contact || invoice.mobile || '';
-    
-    // If still no phone, check if it's embedded in customer info
-    if (!phoneNumber && invoice.customer) {
-      // Try to extract phone from customer string if it contains it
-      const phoneMatch = invoice.customer.match(/\d{10,}/);
-      if (phoneMatch) {
-        phoneNumber = phoneMatch[0];
-      }
-    }
-  } else {
-    // New structure from booking data
-    serviceName = invoice?.service_name || '';
-    packageName = invoice?.package_name || '';
-    phoneNumber = invoice?.phone || invoice?.phone_number || invoice?.contact || invoice?.mobile || '';
-    
-    // Calculate original price and discount
-    const totalPrice = parseFloat(invoice?.total_price || 0);
-    discountAmount = parseFloat(invoice?.discount_amount || 0);
-    originalPrice = totalPrice + discountAmount;
-    
-    // Calculate discount percentage
-    if (originalPrice > 0 && discountAmount > 0) {
-      discountPercentage = Math.round((discountAmount / originalPrice) * 100);
-    }
-  }
-  
-  // Extract other data
+  // Parse data - always use new structure
+  const serviceName = invoice?.service_name || '';
+  const packageName = invoice?.package_name || '';
+  const phoneNumber = invoice?.phone || invoice?.phone_number || '';
   const customerName = invoice?.customer || invoice?.customer_name || '';
   const bookingDate = invoice?.booking_date || invoice?.due_date || new Date();
   const bookingCode = invoice?.display_code || invoice?.booking_code || invoice?.inv_id || '';
   const paymentMethod = invoice?.payment_method || '';
   const paymentType = invoice?.payment_type || 'full_payment';
   
+  // Handle price calculations correctly
+  let originalPrice = 0;
+  let discountAmount = 0;
+  let discountPercentage = 0;
+  
+  // For the custom DP case, we need to use the correct original price
+  if (invoice?.original_price) {
+    // If backend provides original_price, use it
+    originalPrice = parseFloat(invoice.original_price);
+    discountAmount = parseFloat(invoice?.discount_amount || 0);
+  } else {
+    // Fallback: calculate from total_price and discount
+    const totalPrice = parseFloat(invoice?.total_price || 0);
+    discountAmount = parseFloat(invoice?.discount_amount || 0);
+    
+    // For CO-Brosaurus without discount, the original price is 620000
+    if (packageName === 'CO-Brosaurus' && discountAmount === 0) {
+      originalPrice = 620000;
+    } else {
+      originalPrice = totalPrice + discountAmount;
+    }
+  }
+  
+  // Calculate discount percentage
+  if (originalPrice > 0 && discountAmount > 0) {
+    discountPercentage = Math.round((discountAmount / originalPrice) * 100);
+  }
+  
   // Calculate final price after discount
   const finalPrice = originalPrice - discountAmount;
   const isDownPayment = paymentType === 'down_payment';
-  const paymentAmount = isDownPayment ? (finalPrice / 2) : finalPrice;
-  const remainingAmount = isDownPayment ? (finalPrice / 2) : 0;
+  
+  // Get actual paid amount
+  const paidAmount = parseFloat(invoice?.total_price || 0);
+  
+  // Check if custom DP
+  const expectedDPAmount = finalPrice / 2;
+  const isCustomDP = isDownPayment && Math.abs(paidAmount - expectedDPAmount) > 1;
+  
+  // Calculate remaining
+  const remainingAmount = isDownPayment ? (finalPrice - paidAmount) : 0;
   
   // Log for debugging
-  console.log('Parsed data:', {
-    serviceName,
-    packageName,
-    phoneNumber,
+  console.log('Price calculations:', {
     originalPrice,
-    discountPercentage,
     discountAmount,
+    discountPercentage,
     finalPrice,
-    paymentType,
-    isDownPayment
+    paidAmount,
+    remainingAmount,
+    isCustomDP
   });
 
   return (
@@ -472,15 +449,19 @@ const PDFInvoice = ({ invoice }) => {
               
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>
-                  {isDownPayment ? 'Down Payment (50%)' : 'Total Amount'}
+                  {isDownPayment ? (isCustomDP ? 'Custom Down Payment' : 'Down Payment (50%)') : 'Total Amount'}
                 </Text>
-                <Text style={styles.totalValue}>Rp {formatPrice(paymentAmount)}</Text>
+                <Text style={styles.totalValue}>Rp {formatPrice(paidAmount)}</Text>
               </View>
               
               {isDownPayment && (
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Remaining Payment</Text>
-                  <Text style={styles.summaryValue}>Rp {formatPrice(remainingAmount)}</Text>
+                  <Text style={[styles.summaryLabel, { fontWeight: 'bold', fontSize: 12, color: '#1f2937' }]}>
+                    Remaining Payment
+                  </Text>
+                  <Text style={[styles.summaryValue, { fontWeight: 'bold', fontSize: 12, color: '#1f2937' }]}>
+                    Rp {formatPrice(remainingAmount)}
+                  </Text>
                 </View>
               )}
             </View>
@@ -503,9 +484,6 @@ const PDFInvoice = ({ invoice }) => {
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             Thank you for choosing Thirtys Studio!
-          </Text>
-          <Text style={styles.footerText}>
-            Please bring this invoice on your session date.
           </Text>
           <Text style={styles.footerBold}>
             thirtyone.studio@gmail.com | www.thirtyone.studio

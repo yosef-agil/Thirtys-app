@@ -366,23 +366,23 @@ const convertToInvoiceData = (booking) => {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="space-y-1">
-                        <p className="font-medium">
-                          Rp {formatPrice(booking.total_price)}
-                        </p>
-                        {booking.discount_amount > 0 && (
-                          <p className="text-xs text-green-600">
-                            -Rp {formatPrice(booking.discount_amount)} (Promo)
+                      <TableCell className="text-right">
+                        <div className="space-y-1">
+                          <p className="font-medium">
+                            Rp {formatPrice(booking.total_price)}
                           </p>
-                        )}
-                        {booking.payment_type === 'down_payment' && (
-                          <Badge variant="outline" className="text-xs">
-                            DP 50%
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
+                          {booking.discount_amount > 0 && (
+                            <p className="text-xs text-green-600">
+                              -Rp {formatPrice(booking.discount_amount)} (Promo)
+                            </p>
+                          )}
+                          {booking.payment_type === 'down_payment' && (
+                            <Badge variant="outline" className="text-xs">
+                              {booking.is_custom_dp ? 'Custom DP' : 'DP 50%'}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                     <TableCell>{getStatusBadge(booking.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
@@ -637,6 +637,7 @@ const convertToInvoiceData = (booking) => {
               </div>
 
               {/* Payment Details */}
+              {/* Payment Details */}
               <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold text-gray-900">
@@ -645,18 +646,64 @@ const convertToInvoiceData = (booking) => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {/* Original Price */}
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <p className="text-sm text-gray-600 mb-1">Original Price</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        Rp {formatPrice(
+                          selectedBooking.original_price || 
+                          (parseFloat(selectedBooking.total_price) + parseFloat(selectedBooking.discount_amount || 0))
+                        )}
+                      </p>
+                    </div>
+                    
+                    {/* Discount if any */}
+                    {selectedBooking.discount_amount > 0 && (
+                      <div className="p-4 bg-green-50 rounded-xl">
+                        <p className="text-sm text-gray-600 mb-1">Discount</p>
+                        <p className="text-xl font-bold text-green-600">
+                          -Rp {formatPrice(selectedBooking.discount_amount)}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Amount Paid */}
+                    {/* Amount Paid */}
                     <div className="p-4 bg-blue-50 rounded-xl">
-                      <p className="text-sm text-gray-600 mb-1">Total Amount</p>
+                      <p className="text-sm text-gray-600 mb-1">
+                        {selectedBooking.payment_type === 'down_payment' ? 'Down Payment' : 'Total Paid'}
+                      </p>
                       <p className="text-2xl font-bold text-blue-600">
                         Rp {formatPrice(selectedBooking.total_price)}
                       </p>
+                      {selectedBooking.payment_type === 'down_payment' && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          {selectedBooking.is_custom_dp ? 'Custom DP' : '50% DP'}
+                        </p>
+                      )}
                     </div>
+                    
+                    {/* Remaining if DP */}
+                    {selectedBooking.payment_type === 'down_payment' && (
+                      <div className="p-4 bg-amber-50 rounded-xl">
+                        <p className="text-sm text-gray-600 mb-1">Remaining Payment</p>
+                        <p className="text-xl font-bold text-amber-600">
+                          Rp {formatPrice(
+                            selectedBooking.remaining_amount || 
+                            ((selectedBooking.original_price || 450000) - parseFloat(selectedBooking.total_price))
+                          )}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Payment Type & Method */}
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <p className="text-sm text-gray-600 mb-1">Payment Type</p>
                       <p className="font-semibold text-gray-900 capitalize">
                         {selectedBooking.payment_type?.replace('_', ' ')}
                       </p>
                     </div>
+                    
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <p className="text-sm text-gray-600 mb-1">Payment Method</p>
                       <p className="font-semibold text-gray-900 capitalize">
@@ -664,13 +711,6 @@ const convertToInvoiceData = (booking) => {
                       </p>
                     </div>
                   </div>
-                  
-                  {selectedBooking.selected_bank && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                      <p className="text-sm text-gray-600 mb-1">Bank</p>
-                      <p className="font-semibold text-gray-900">{selectedBooking.selected_bank}</p>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
 

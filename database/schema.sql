@@ -504,3 +504,73 @@ BEGIN
     WHERE id = NEW.promo_code_id;
 END//
 DELIMITER ;
+
+
+
+
+-- Tambahkan kolom duration di service_packages jika belum ada
+ALTER TABLE service_packages 
+ADD COLUMN duration_minutes INT DEFAULT 60 AFTER price;
+
+-- Update durasi untuk setiap package Graduation Photography
+UPDATE service_packages 
+SET duration_minutes = CASE 
+    WHEN package_name = 'Brontosaurus' THEN 90
+    WHEN package_name = 'CO-Brosaurus' THEN 120
+    WHEN package_name = 'CO-Megasaurus' THEN 180
+    WHEN package_name = 'CO-Spinosaurus' THEN 300
+    WHEN package_name = 'Couple Package' THEN 80
+    WHEN package_name = 'Group Package - Brosaurus' THEN 120
+    WHEN package_name = 'Group Package - Megasaurus' THEN 150
+    WHEN package_name = 'Group Package - Spinosaurus' THEN 180
+    WHEN package_name = 'Megalosaurus' THEN 150
+    WHEN package_name = 'Personal Package' THEN 45
+    WHEN package_name = 'Spinosaurus' THEN 240
+    ELSE 60
+END
+WHERE service_id = 2; -- Graduation Photography ID
+
+-- Buat tabel baru untuk package-specific time slots
+CREATE TABLE IF NOT EXISTS package_time_slots (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    package_id INT NOT NULL,
+    date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    max_capacity INT DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (package_id) REFERENCES service_packages(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_package_slot (package_id, date, start_time)
+);
+
+
+
+
+
+
+
+
+
+-- Tambahkan kolom untuk custom DP amount di tabel bookings
+ALTER TABLE bookings 
+ADD COLUMN paid_amount DECIMAL(10, 2) NULL AFTER total_price,
+ADD COLUMN is_custom_dp BOOLEAN DEFAULT FALSE AFTER payment_type;
+
+-- Update existing bookings untuk set paid_amount
+UPDATE bookings 
+SET paid_amount = CASE 
+    WHEN payment_type = 'down_payment' THEN total_price * 0.5
+    WHEN payment_type = 'full_payment' THEN total_price
+    ELSE total_price
+END
+WHERE paid_amount IS NULL;
+
+
+
+
+
+
+
+ALTER TABLE bookings 
+ADD COLUMN original_price DECIMAL(10, 2) NULL AFTER total_price,
+ADD COLUMN remaining_amount DECIMAL(10, 2) DEFAULT 0 AFTER discount_amount;

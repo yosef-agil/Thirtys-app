@@ -22,10 +22,11 @@ export const createBooking = async (req, res) => {
       faculty,
       university,
       paymentType,
-      paymentMethod,  // NEW
-      selectedBank,   // NEW
-      promoCode,  // NEW
-      totalPrice,
+      paymentMethod,
+      selectedBank,
+      promoCode,
+      customDPAmount,
+      isCustomDP,
       paidAmount
     } = req.body;
 
@@ -69,7 +70,7 @@ export const createBooking = async (req, res) => {
       calculatedFullPrice = calculatedFullPrice * (1 - serviceData[0].discount_percentage / 100);
     }
 
-    // NEW - Handle promo code
+    // Handle promo code
     let promoCodeId = null;
     let promoDiscountAmount = 0;
     
@@ -99,13 +100,18 @@ export const createBooking = async (req, res) => {
       }
     }
 
-
     // Use frontend-provided totalPrice if available, otherwise use calculated
     const finalFullPrice = calculatedFullPrice - promoDiscountAmount;
     
-    // Calculate paid amount
+    // Calculate paid amount - untuk custom DP
     let finalPaidAmount;
-    if (paidAmount) {
+    let actualPaymentType = paymentType; // Track actual payment type
+    
+    if (isCustomDP === 'true' || isCustomDP === true) {
+      // Jika custom DP, gunakan customDPAmount
+      finalPaidAmount = parseFloat(customDPAmount);
+      actualPaymentType = 'down_payment'; // Store as down_payment in DB
+    } else if (paidAmount) {
       finalPaidAmount = parseFloat(paidAmount);
     } else {
       finalPaidAmount = paymentType === 'down_payment' ? finalFullPrice * 0.5 : finalFullPrice;
@@ -141,7 +147,7 @@ export const createBooking = async (req, res) => {
     
     const hasPaymentMethodColumn = columns.length > 0;
 
-    // Insert booking
+    // Insert booking - gunakan query yang sudah ada
     let insertQuery;
     let insertParams;
 
@@ -150,20 +156,22 @@ export const createBooking = async (req, res) => {
         INSERT INTO bookings (
           booking_code, customer_name, phone_number, service_id, package_id,
           booking_date, time_slot_id, faculty, university, total_price,
-          payment_type, payment_method, selected_bank, payment_proof, 
-          promo_code_id, discount_amount, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+          original_price, payment_type, payment_method, selected_bank, payment_proof, 
+          promo_code_id, discount_amount, remaining_amount, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
       `;
       insertParams = [
         bookingCode, customerName, phoneNumber, serviceId, packageId,
         bookingDate, timeSlotId || null, faculty || null, university || null, 
-        finalFullPrice,
-        paymentType, 
+        finalPaidAmount, // total_price = yang dibayar sekarang
+        finalFullPrice, // original_price = harga setelah diskon
+        actualPaymentType,
         paymentMethod,
         selectedBank || null,
-        paymentProofUrl, // Use paymentProofUrl not paymentProof
+        paymentProofUrl,
         promoCodeId,
-        promoDiscountAmount
+        promoDiscountAmount,
+        finalFullPrice - finalPaidAmount, // remaining_amount
       ];
     } else {
       // Fallback for old database schema
@@ -177,10 +185,10 @@ export const createBooking = async (req, res) => {
       insertParams = [
         bookingCode, customerName, phoneNumber, serviceId, packageId,
         bookingDate, timeSlotId || null, faculty || null, university || null, 
-        finalFullPrice,
-        paymentType
+        finalPaidAmount,
+        actualPaymentType
       ];
-    } 
+    }
 
     const [result] = await connection.execute(insertQuery, insertParams);
 
@@ -200,7 +208,6 @@ export const createBooking = async (req, res) => {
         [promoCodeId, result.insertId, phoneNumber, promoDiscountAmount]
       );
     }
-
 
     // Update time slot booking relationship
     if (timeSlotId) {
@@ -238,11 +245,12 @@ export const createBooking = async (req, res) => {
       message: 'Booking created successfully',
       bookingCode,
       bookingId: result.insertId,
-      originalPrice: calculatedFullPrice,
+      originalPrice: calculatedFullPrice + promoDiscountAmount,
       discountAmount: promoDiscountAmount,
       totalPrice: finalFullPrice,
       paidAmount: finalPaidAmount,
-      remainingAmount: paymentType === 'down_payment' ? finalFullPrice - finalPaidAmount : 0,
+      remainingAmount: finalFullPrice - finalPaidAmount,
+      paymentType: isCustomDP === 'true' ? 'custom_dp' : actualPaymentType,
       paymentProofUrl
     });
 
@@ -271,7 +279,7 @@ export const getAllBookings = async (req, res) => {
     let query = `
       SELECT b.*, s.name as service_name, sp.package_name,
         ts.start_time, ts.end_time
-        ${hasPaymentMethodColumn ? ', b.payment_method, b.selected_bank' : ''}
+        ${hasPaymentMethodColumn ? ', b.payment_method, b.selected_bank, b.original_price, b.remaining_amount' : ''}
       FROM bookings b
       JOIN services s ON b.service_id = s.id
       JOIN service_packages sp ON b.package_id = sp.id
@@ -323,7 +331,7 @@ export const getBookingById = async (req, res) => {
     const [bookings] = await db.execute(`
       SELECT b.*, s.name as service_name, sp.package_name,
         ts.start_time, ts.end_time
-        ${hasPaymentMethodColumn ? ', b.payment_method, b.selected_bank' : ''}
+        ${hasPaymentMethodColumn ? ', b.payment_method, b.selected_bank, b.original_price, b.remaining_amount' : ''}
       FROM bookings b
       JOIN services s ON b.service_id = s.id
       JOIN service_packages sp ON b.package_id = sp.id
@@ -455,7 +463,7 @@ export const getBookingsWithPagination = async (req, res) => {
     let dataQuery = `
       SELECT b.*, s.name as service_name, sp.package_name,
         ts.start_time, ts.end_time,
-        b.payment_method, b.selected_bank
+        b.payment_method, b.selected_bank, b.original_price, b.remaining_amount
       FROM bookings b
       JOIN services s ON b.service_id = s.id
       JOIN service_packages sp ON b.package_id = sp.id
